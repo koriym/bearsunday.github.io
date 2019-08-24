@@ -52,3 +52,6 @@ permalink: /contributors.html
 [<img alt="T-Miura0203" src="https://avatars0.githubusercontent.com/u/13865557?v=3&s=117" width="117">](https://github.com/T-Miura0203)
 [<img alt="toshikimiyagawa" src="https://avatars2.githubusercontent.com/u/1582243?s=460&v=4&s=117" width="117">](https://github.com/toshikimiyagawa)
 [<img alt="kalibora" src="https://avatars3.githubusercontent.com/u/434940?s=460&v=4" width="117">](https://github.com/kalibora)
+[<img alt="momospnr" src="https://avatars1.githubusercontent.com/u/1066913?s=460&v=4" width="117">](https://github.com/momospnr)
+[<img alt="ssnm-a" src="https://avatars0.githubusercontent.com/u/43442305?s=460&v=4" width="117">](https://github.com/ssnm-a)
+[<img alt="piotzkhider" src="https://avatars1.githubusercontent.com/u/7950487?s=460&v=4" width="117">](https://github.com/piotzkhider)
