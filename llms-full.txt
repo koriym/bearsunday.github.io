@@ -1861,11 +1861,13 @@ Reference
 
 
 
-# Security
+# Security <sup style="font-size:0.5em; color:#666; font-weight:normal;">Beta</sup>
 
-The [bear/security](https://github.com/bearsunday/BEAR.Security) package helps find security vulnerabilities in your BEAR.Sunday application.
+Security tools can scan your application for vulnerability assessment. With static analysis, dynamic testing, taint analysis, and AI auditing, architecture-aware tools analyze from multiple angles, detecting vulnerabilities that generic tools miss.
 
 ## Installation
+
+Install [bear/security](https://github.com/bearsunday/BEAR.Security).
 
 ```bash
 composer require --dev bear/security
@@ -1875,14 +1877,46 @@ composer require --dev bear/security
 
 | Tool | What it does | When to use |
 |------|--------------|-------------|
-| SAST | Finds dangerous patterns in your code | During development |
-| DAST | Sends attack requests to your app | Before deployment |
+| SAST[^sast] | Static analysis to find dangerous patterns in your code | During development |
+| DAST[^dast] | Dynamic analysis to send attack requests to your app | Before deployment |
 | AI Auditor | AI reviews your code for security issues | Code review |
 | Psalm Plugin | Traces user input to dangerous operations | During development |
 
+[^sast]: Static Application Security Testing
+[^dast]: Dynamic Application Security Testing
+
+## Design Philosophy: Recall-First
+
+Security scanners have traditionally had two approaches: precision-first (report only certain issues) and recall-first (report suspicious patterns), with a trade-off between them.
+
+BEAR.Security adopts a recall-first approach. Missing a vulnerability (False Negative) is critical, but false positives (False Positive) can be reviewed and excluded. With AI agents now able to handle false positive verification, this strategy is more effective than ever.
+
+### Recommended Workflow
+
+```bash
+# 1. Run SAST to detect pattern-based vulnerabilities
+./vendor/bin/bear.security-scan src
+
+# 2. Review results and fix vulnerabilities
+# Add @security-ignore comment to false positives (see example below)
+
+# 3. Run AI Auditor to detect business logic issues
+./vendor/bin/bear-security-audit src
+
+# 4. Review and fix detected issues
+```
+
+Example of suppressing a false positive:
+
+```php
+$path = $this->buildPath($id); // @security-ignore PATH_TRAVERSAL_FILE_OPS: $id is validated integer from router
+```
+
+Once `@security-ignore` is added, the issue is suppressed in subsequent scans.
+
 ## SAST
 
-Scans your source code for dangerous patterns:
+Scans your source code for dangerous patterns. We recommend running this from an AI agent (such as Claude Code) and having the AI verify whether detections are false positives.
 
 ```bash
 ./vendor/bin/bear.security-scan src
@@ -1898,6 +1932,8 @@ Detects 14 vulnerability types:
 | Data Protection | Insecure deserialization, XXE |
 | Session | Session fixation, CSRF |
 | Network | SSRF, Remote file inclusion |
+
+See the [Vulnerability Reference](https://bearsunday.github.io/BEAR.Security/issues/en/) for details on each vulnerability.
 
 ## DAST
 
@@ -1922,7 +1958,12 @@ Tests include:
 Uses Claude AI to find security issues that pattern matching cannot detect:
 
 ```bash
-# Requires ANTHROPIC_API_KEY or Claude CLI authentication
+# Option 1: API Key
+export ANTHROPIC_API_KEY=sk-ant-...
+./vendor/bin/bear-security-audit src
+
+# Option 2: Claude CLI (Max Plan - no API key required)
+claude auth login
 ./vendor/bin/bear-security-audit src
 ```
 
@@ -1933,14 +1974,23 @@ Uses Claude AI to find security issues that pattern matching cannot detect:
 | Race Condition | Time-of-check to time-of-use flaws |
 | Business Logic | Application-specific security flaws |
 
-## Psalm Plugin
+## Psalm Plugin (Taint Analysis)
 
-Marks user input (like `$id` in `onGet($id)`) as tainted and traces how it flows through your code. Reports when tainted data reaches dangerous operations like database queries or HTML output without proper escaping.
+Taint analysis is a static analysis technique that marks user input as tainted variables and traces how that taint propagates through your code. It reports vulnerabilities when tainted data reaches SQL queries or HTML output without proper sanitization.
+
+### Setup
 
 Add the plugin and stubs to your `psalm.xml`:
 
 ```xml
-<psalm>
+<?xml version="1.0"?>
+<psalm
+    xmlns="https://getpsalm.org/schema/config"
+    errorLevel="1"
+>
+    <projectFiles>
+        <directory name="src"/>
+    </projectFiles>
     <stubs>
         <file name="vendor/bear/security/stubs/AuraSql.phpstub"/>
         <file name="vendor/bear/security/stubs/PDO.phpstub"/>
@@ -1959,15 +2009,49 @@ Add the plugin and stubs to your `psalm.xml`:
 
 The `targets` specify which resources receive external input. Use `Page` when serving web pages with `html` context, `App` when serving APIs with `api` context.
 
+### Stubs
+
+Stubs provide taint annotations for third-party libraries:
+
+| Stub | Purpose |
+|------|---------|
+| `AuraSql.phpstub` | Marks SQL query methods as taint sinks |
+| `PDO.phpstub` | Marks PDO methods as taint sinks |
+| `Qiq.phpstub` | Marks template output as taint sinks |
+
+### Running
+
 Run taint analysis:
 
 ```bash
 ./vendor/bin/psalm --taint-analysis
 ```
 
+Add convenience scripts to `composer.json`:
+
+```json
+{
+    "scripts": {
+        "security": "./vendor/bin/bear.security-scan src",
+        "taint": "./vendor/bin/psalm --taint-analysis 2>&1 | grep -E 'Tainted' || true"
+    },
+    "scripts-descriptions": {
+        "security": "Run SAST security scan",
+        "taint": "Run Psalm taint analysis"
+    }
+}
+```
+
+Then run with:
+
+```bash
+composer security
+composer taint
+```
+
 ## GitHub Actions
 
-Add security scanning to your CI pipeline:
+You can add security scanning to your CI pipeline:
 
 ```bash
 cp vendor/bear/security/workflows/security-sast.yml .github/workflows/
@@ -1982,7 +2066,9 @@ This workflow runs on every push and pull request:
 
 Results appear in your repository's **Security > Code scanning** section.
 
-## Why It Works
+**Recommended**: Run the scan from an AI agent first, add `@security-ignore` to false positives, then enable CI.
+
+## Architecture and Security
 
 BEAR.Sunday's architecture makes security scanning more effective:
 
@@ -1991,6 +2077,15 @@ BEAR.Sunday's architecture makes security scanning more effective:
 - **No Hidden Magic**: Dependencies are explicit through constructor injection. Scanners can analyze the complete code path.
 
 - **Framework-Aware AI**: The AI Auditor understands BEAR.Sunday patterns and can detect business logic flaws, not just generic vulnerabilities.
+
+## Prompt for AI Agents
+
+To set up bear/security with an AI coding assistant, use this prompt:
+
+```
+Follow the setup instructions at:
+https://raw.githubusercontent.com/bearsunday/BEAR.Skills/1.x/.claude/skills/bear-security-setup/SKILL.md
+```
 
 
 
@@ -5567,6 +5662,106 @@ array (
  ...
 ```
 
+### DataLoader
+
+Crawl operations can cause N+1 problems when each linked resource makes individual database queries. The DataLoader pattern solves this by batching multiple requests into a single query.
+
+The DataLoader name comes from [Facebook's DataLoader](https://github.com/graphql/dataloader), which provides a consistent API for batching and caching data loading operations.
+
+#### Without DataLoader
+
+```
+Author (1 query)
+└── Post × 3 (1 query, returns 3)
+    └── Meta (3 queries) ← N+1 problem!
+```
+
+#### With DataLoader
+
+```
+Author (1 query)
+└── Post × 3 (1 query)
+    └── Meta (1 batched query) ← Solved!
+```
+
+#### Implementation
+
+1. Create a DataLoader class implementing `DataLoaderInterface`:
+
+```php
+use Aura\Sql\ExtendedPdoInterface;
+use BEAR\Resource\DataLoader\DataLoaderInterface;
+
+class MetaDataLoader implements DataLoaderInterface
+{
+    public function __construct(
+        private ExtendedPdoInterface $pdo
+    ) {}
+
+    public function __invoke(array $queries): array
+    {
+        // $queries contains query parameters for each request
+        // e.g., [['post_id' => '1'], ['post_id' => '2'], ['post_id' => '3']]
+
+        $postIds = array_column($queries, 'post_id');
+
+        // Single bulk query with IN clause
+        $sql = "SELECT * FROM meta WHERE post_id IN (:post_ids)";
+        return $this->pdo->fetchAll($sql, ['post_ids' => $postIds]);
+    }
+}
+
+// You can also use Ray.MediaQuery pattern:
+// class MetaDataLoader implements DataLoaderInterface
+// {
+//     public function __construct(private MetaQueryInterface $query) {}
+//     public function __invoke(array $queries): array
+//     {
+//         return $this->query->list(array_column($queries, 'post_id'));
+//     }
+// }
+```
+
+2. Specify the DataLoader in the `#[Link]` attribute:
+
+```php
+#[Link(crawl: "post-tree", rel: "meta", href: "app://self/meta{?post_id}", dataLoader: MetaDataLoader::class)]
+public function onGet($author_id)
+```
+
+The DataLoader automatically:
+- Collects all queries during crawl
+- Calls your DataLoader once with all queries
+- Distributes results to the appropriate resources based on key matching
+
+#### Key Inference
+
+The key for matching results is auto-inferred from the URI template:
+
+| URI Template | Inferred Key |
+|--------------|--------------|
+| `{?post_id}` | `post_id` |
+| `post_id={id}` | `post_id` |
+| `{?post_id,locale}` | `post_id`, `locale` |
+
+The returned rows must contain the key column(s) for proper distribution.
+
+#### Multiple Keys
+
+For multiple key parameters, use all keys in your query:
+
+```php
+// URI template: app://self/translation{?post_id,locale}
+// $queries: [['post_id' => '1', 'locale' => 'en'], ['post_id' => '1', 'locale' => 'ja']]
+
+public function __invoke(array $queries): array
+{
+    // Build query using both keys
+    $sql = "SELECT * FROM translation WHERE (post_id, locale) IN (...)";
+    // ...
+}
+```
+
 
 
 # Rendering and transfer
@@ -8137,180 +8332,173 @@ $this->install(new AttributeModule());
 
 [^1]:Attributes take precedence when mixed in a single method.
 
+
 # API Doc
 
-ApiDoc generates API documentation from your application.
+Your application is the documentation.
 
-The auto-generated documentation from your code and JSON schema will reduce your effort and keep your API documentation accurate.
+- **ApiDoc HTML**: Developer documentation
+- **OpenAPI 3.1**: Tool chain integration
+- **JSON Schema**: Information model
+- **ALPS**: Vocabulary semantics for AI understanding
+
+## Demo
+
+- [HTML](https://bearsunday.github.io/BEAR.ApiDoc/)
+- [OpenAPI](https://bearsunday.github.io/BEAR.ApiDoc/openapi/)
+
+## Installation
+
+```bash
+composer require bear/api-doc --dev
+./vendor/bin/apidoc init
+```
+
+The `init` command generates `apidoc.xml` from your `composer.json`. Edit it to customize.
+
+```xml
+<apidoc>
+    <appName>MyVendor\MyProject</appName>  <!-- Application namespace -->
+    <scheme>app</scheme>                    <!-- app or page -->
+    <docDir>docs/api</docDir>
+    <format>html</format>                   <!-- html, html,openapi, etc. -->
+</apidoc>
+```
+
+The `format` accepts comma-separated values: `html`, `md`, `openapi`.
 
 ## Usage
 
-Install BEAR.ApiDoc.
+Generate documentation from the command line.
 
-    composer require bear/api-doc --dev
-
-Copy the configuration file.
-
-    cp ./vendor/bear/api-doc/apidoc.xml.dist ./apidoc.xml
-
-## Source
-
-ApiDoc generates documentation by retrieving information from phpdoc, method signatures, and JSON schema.
-
-#### PHPDOC
-
-In phpdoc, the following parts are retrieved.
-For information that applies across resources, such as authentication, prepare a separate documentation page and link it with `@link`.
-
-```php
-/**
- * {title}
- *
- * {description}
- *
- * {@link htttp;//example.com/docs/auth 認証}
- */
- class Foo extends ResourceObject
- {
- }
+```bash
+./vendor/bin/apidoc -capidoc.xml
 ```
 
-```php
-/**
- * {title}
- *
- * {description}
- *
- * @param string $id ユーザーID
- */
- public function onGet(string $id ='kuma'): static
- {
- }
+### OpenAPI HTML Generation
+
+When `openapi` format is specified, `openapi.json` is generated. Use Redocly CLI to convert it to HTML.
+
+```bash
+npm install -g @redocly/cli
+redocly build-docs docs/api/openapi/openapi.json -o docs/api/openapi/index.html
 ```
 
-* If there is no `@param` description in the phpdoc of the method, get the information of the argument from the method signature.
-* The order of priority for information acquisition is phpdoc, JSON schema, and profile.
+### Composer Scripts
+
+Add scripts to `composer.json` for convenience.
+
+```json
+{
+    "scripts": {
+        "docs": "./vendor/bin/apidoc"
+    },
+    "scripts-descriptions": {
+        "docs": "Generate API documentation"
+    }
+}
+```
+
+```bash
+composer docs
+```
+
+## GitHub Actions
+
+Push to main branch to automatically generate and publish API documentation to GitHub Pages. The reusable workflow handles HTML generation, OpenAPI conversion with Redocly, and ALPS state diagram creation.
+
+```yaml
+name: API Docs
+on:
+  push:
+    branches: [main]
+
+jobs:
+  docs:
+    uses: bearsunday/BEAR.ApiDoc/.github/workflows/apidoc.yml@v1
+    with:
+      format: 'html,openapi,alps'
+      alps-profile: 'alps.json'
+```
+
+Enable GitHub Pages: Settings → Pages → Source: "GitHub Actions"
+
+### Inputs
+
+| Input | Default | Description |
+|-------|---------|-------------|
+| `php-version` | `'8.2'` | PHP version |
+| `format` | `'html,openapi'` | Comma-separated: html, md, openapi, alps |
+| `alps-profile` | `''` | ALPS profile path (required for alps format) |
+| `docs-path` | `'docs/api'` | Output directory |
+| `publish-to` | `'github-pages'` | `github-pages` or `artifact-only` |
+
+### Output Structure
+
+```
+docs/
+├── index.html          # API documentation
+├── schemas/
+│   ├── index.html      # Schema list
+│   └── *.json          # JSON Schema
+├── openapi/
+│   ├── openapi.json    # OpenAPI spec
+│   └── index.html      # Redocly HTML
+└── alps/
+    ├── alps.json       # ALPS profile
+    └── index.html      # ASD state diagram
+```
 
 ## Configuration
-
-The configuration is written in XML.
-The minimum specification is as follows.
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <apidoc
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="https://bearsunday.github.io/BEAR.ApiDoc/apidoc.xsd">
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="https://bearsunday.github.io/BEAR.ApiDoc/apidoc.xsd">
     <appName>MyVendor\MyProject</appName>
     <scheme>app</scheme>
     <docDir>docs</docDir>
     <format>html</format>
+    <alps>alps.json</alps>
 </apidoc>
 ```
 
-### Required Attributes
-
-#### appName
-
-Application namespaces
-
-#### scheme
-
-The name of the schema to use for API documentation. `page` or `app`.
-
-#### docDir
-
-Output directory name.
-
-#### format
-
-The output format, HTML or MD (Mark down).
-
-### Optional attributes
-
-#### title
-
-API title
-
-```xml
-<title>MyBlog API</title>
-```
-
-#### description
-
-API description
-
-```xml
-<description>MyBlog API description</description
-```
-
-#### links
-
-Links. The `href` is the URL of the link, and the `rel` is its content.
-
-```xml
-<links>
-    <link href="https://www.example.com/issue" rel="issue" />
-    <link href="https://www.example.com/help" rel="help" />
-</links>
-```
-
-#### alps
-
-Specifies an "ALPS profile" that defines the terms used by the API.
-
-```xml
-<alps>alps/profile.json</alps>.
-```
+| Option | Required | Description |
+|--------|----------|-------------|
+| `appName` | Yes | Application namespace |
+| `scheme` | Yes | `app` or `page` |
+| `docDir` | Yes | Output directory |
+| `format` | Yes | `html`, `md`, `openapi` |
+| `title` | | API title |
+| `alps` | | ALPS profile path |
 
 ## Profile
 
-ApiDoc supports the [ALPS](http://alps.io/) format of the [RFC 6906 Profile](https://tools.ietf.org/html/rfc6906) which gives additional information to the application.
-
-Words used in API request and response keys are called semantic descriptors, and if you create a dictionary of profiles, you don't need to describe the words for each request.
-Centralized definitions of words and phrases prevent notational errors and aid in shared understanding.
-
-The words used in API request and response keys are called semantic descriptors, and creating a dictionary of profiles eliminates the need to explain the words for each request.
-Centralized definitions of words and phrases prevent shaky notation and aid in shared understanding.
-
-The following is an example of defining descriptors `firstName` and `familyName` with `title` and `def` respectively.
-While `title` describes a word and clarifies its meaning, `def` links standard words defined in vocabulary sites such as [Schema.org](https://schema.org/).
-
-ALPS profiles can be written in XML or JSON.
-
-profile.xml
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<alps
-     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-     xsi:noNamespaceSchemaLocation="https://alps-io.github.io/schemas/alps.xsd">
-    <!-- Ontology -->
-    <descriptor id="firstName" title="The person's first name."/>
-    <descriptor id="familyName" def="https://schema.org/familyName"/>
-</alps>
-```
-
-profile.json
+ALPS profile defines your API vocabulary. Centralized definitions prevent inconsistencies and aid shared understanding.
 
 ```json
 {
-  "$schema": "https://alps-io.github.io/schemas/alps.json",
-  "alps": {
-    "descriptor": [
-      {"id": "firstName", "title": "The person's first name."}
-      {"id": "familyName", "def": "https://schema.org/familyName"},
-    ]
-  }
+    "$schema": "https://alps-io.github.io/schemas/alps.json",
+    "alps": {
+        "descriptor": [
+            {"id": "firstName", "title": "The person's first name."},
+            {"id": "familyName", "def": "https://schema.org/familyName"}
+        ]
+    }
 }
 ```
 
-Descriptions of words appearing in ApiDoc take precedence over phpdoc > JsonSchema > ALPS in that order.
+## Application as Documentation
+
+Code is the single source of truth. Documentation generated from your application never diverges from the implementation. JSON Schema publishes your information model—not just a list of endpoints—enabling client-side validation and form generation. ALPS defines vocabulary semantics, allowing AI agents to understand not just the structure, but the meaning of your API.
 
 ## Reference
 
-* [Demo](https://bearsunday.github.io/BEAR.ApiDoc/)
-* [ALPS](http://alps.io/)
-* [ALPS-ASD](https://github.com/koriym/app-state-diagram)
+- [BEAR.ApiDoc](https://github.com/bearsunday/BEAR.ApiDoc) - API documentation generator
+- [ALPS](https://www.app-state-diagram.com/manuals/1.0/en/) - Application-Level Profile Semantics
+- [JSON Schema](https://json-schema.org/) - Data validation and documentation
+- [Redocly CLI](https://redocly.com/docs/cli/installation/) - OpenAPI to HTML conversion
 
 
 
