@@ -144,6 +144,13 @@ HALで記述されたAPIセットは**ヘッドレスのRESTアプリケーシ�
 * [HAL Browser](https://github.com/mikekelly/hal-browser) - [example](http://haltalk.herokuapp.com/explorer/browser.html#/)
 * [hyperagent.js](https://weluse.github.io/hyperagent/)
 
+### HAL Layout <sup style="font-size:0.5em; color:#666; font-weight:normal;">Beta</sup>
+
+HALリソースをReact/Vueコンポーネントとしてレンダリングするライブラリ：
+
+* [hal-layout](https://github.com/koriym/hal-layout) - React版
+* [hal-layout-vue](https://github.com/koriym/hal-layout-vue) - Vue 3版
+
 ## Siren
 
 [Siren](https://github.com/kevinswiber/siren)ハイパーメディア（`application/vnd.siren+json`）をサポートした[Sirenモジュール](https://github.com/kuma-guy/BEAR.SirenModule)も利用可能です。

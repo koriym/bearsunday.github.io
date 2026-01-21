@@ -53,6 +53,18 @@ bundle exec jekyll build
 - `_config.yml`: Jekyll configuration with llms.txt specific settings
 - `_site/`: Generated static site (includes both HTML and cleaned markdown files)
 
+## Styling Conventions
+
+### Beta Label
+
+For features in beta status, use this inline style:
+
+```html
+# Title <sup style="font-size:0.5em; color:#666; font-weight:normal;">Beta</sup>
+```
+
+Example: `manuals/1.0/ja/security.md`
+
 ## Documentation Management
 
 The site uses a sophisticated system for managing documentation:
