@@ -20,6 +20,7 @@ This module is suited for the following scenarios:
 - Rendering most pages with your existing template engine, while using JS UI only for pages requiring high interactivity
 - Adding React or Vue.js UI to specific pages in an existing BEAR.Sunday project
 - Maintaining a single PHP application without separating frontend and backend
+- Enabling PHP and JS teams to develop in parallel using `state/metas` as the contract
 
 Only resources with the `#[Ssr]` attribute are rendered with JS UI, allowing easy coexistence with traditional template engines.
 
@@ -27,14 +28,9 @@ Only resources with the `#[Ssr]` attribute are rendered with JS UI, allowing eas
 
 * PHP 8.2+
 * [Node.js](https://nodejs.org/)
-* [V8Js](http://php.net/manual/en/book.v8js.php) (Development option)
+* [V8Js](https://www.php.net/manual/en/book.v8js.php) (Development option)
 
 Note: If you do not install V8Js then JS will be run using Node.js.
-
-## Terminology
-
-* **CSR** Client Side Rendering (via Web Browser)
-* **SSR** Server Side Rendering (via V8 or Node.js)
 
 ## JavaScript
 
@@ -241,8 +237,7 @@ For other commands such `lint` or `test` etc. please see [commands](https://gith
 
 ## Performance
 
-The ability to save the V8 Snapshot into APC means we can see dramatic performance benefits. In `ProdModule` install `ApcSsrModule`.
-ReactJs or your application snapshot is saved in `APCu` and can be reused. V8 is required.
+The V8 snapshot can be saved to APCu for improved performance. Install `ApcSsrModule` in `ProdModule`. V8Js is required:
 
 ```php
 $bundleSrcBasePath = dirname(__DIR__, 2) . '/var/www/build';
@@ -251,39 +246,4 @@ $this->install(new ApcSsrModule($bundleSrcBasePath));
 
 The `$bundleSrcBasePath` is the directory path where the JavaScript bundle files are located.
 
-To use caches other than APC look at the code in `ApcSsrModule` as a reference to make your own module. It is possible to use a cache compatible with PSR16.
 
-In order to tune performance at compile time pulling in your JS code (and ReactJs etc) into the V8 snapshot can give you further performance improvements.
-For more info please see the following.
-
-* [20x performance boost with V8Js snapshots](http://stesie.github.io/2016/02/snapshot-performance)
-* [v8js - Possibility to Improve Performance with Precompiled Templates/Classes?](https://github.com/phpv8/v8js/issues/205)
-
-## Debugging
-
-* Chrome Plugin [React developer tools](https://chrome.google.com/webstore/detail/react-developer-tools/fmkadmapgofadopljbjfkapdkoienihi) or [Redux devTools](https://chrome.google.com/webstore/detail/redux-devtools/lmhkpmbekcpmknklioeibfkpmmfibljd) can be used.
-* When a 500 error is returned look at the response details by using `var/log` or `curl` etc.
-
-## References
-
-* [ECMAScript 6](http://postd.cc/es6-cheatsheet/)
-* [Airbnb JavaScript Styleguide](https://github.com/airbnb/javascript)
-* [React](https://facebook.github.io/react/)
-* [Redux](http://redux.js.org/)
-* [Redux GitHub](https://github.com/reactjs/redux)
-* [Redux DevTools](https://github.com/gaearon/redux-devtools)
-* [Karma test runner](http://karma-runner.github.io/1.0/index.html)
-* [Mocha test framework](https://mochajs.org/)
-* [Chai assertion library](http://chaijs.com/)
-* [Webpack module bundler](https://webpack.js.org/)
-
-## Other view libraries
-
-* [Vue.js](https://vuejs.org/)
-* [Handlebars.js](http://handlebarsjs.com/)
-* [doT.js](http://olado.github.io/doT/index.html)
-* [Pug](https://pugjs.org/api/getting-started.html)
-* [Hogan](http://twitter.github.io/hogan.js/) (Twitter)
-* [Nunjucks](https://mozilla.github.io/nunjucks/) (Mozilla)
-* [Dust.js](http://www.dustjs.com/) (LinkedIn)
-* [Marko](http://markojs.com/) (eBay)
