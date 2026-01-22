@@ -27,7 +27,6 @@ permalink: /manuals/1.0/ja/js-ui.html
 
 * PHP 8.2以上
 * [Node.js](https://nodejs.org/ja/)
-* [yarn](https://yarnpkg.com/)
 * [V8Js](http://php.net/manual/ja/book.v8js.php)（開発時はオプション）
 
 注：V8Jsがインストールされていない場合、Node.jsでJavaScriptが実行されます。
@@ -55,7 +54,7 @@ UIスケルトンアプリケーション`koriym/js-ui-skeleton`をインスト�
 composer require koriym/js-ui-skeleton 1.x-dev
 cp -r vendor/koriym/js-ui-skeleton/ui .
 cp -r vendor/koriym/js-ui-skeleton/package.json .
-yarn install
+npm install
 ```
 
 ### UIアプリケーションの実行
@@ -63,7 +62,7 @@ yarn install
 まずはデモアプリケーションを動かしてみましょう。表示されたWebページからレンダリング方法を選択して、JavaScriptアプリケーションを実行します：
 
 ```bash
-yarn run ui
+npm run ui
 ```
 
 このアプリケーションの入力は`ui/dev/config/`の設定ファイルで行います：
@@ -89,7 +88,7 @@ cp ui/dev/config/index.php ui/dev/config/myapp.php
 
 ブラウザをリロードして新しい設定を試します。このように、JavaScriptや本体のPHPアプリケーションを変更せずに、UIのデータを変更して動作を確認することができます。
 
-このセクションで編集したPHPの設定ファイルは、`yarn run ui`で実行する時のみに使用されます。PHP側が必要とするのは、バンドルされて出力されたJavaScriptファイルのみです。
+このセクションで編集したPHPの設定ファイルは、`npm run ui`で実行する時のみに使用されます。PHP側が必要とするのは、バンドルされて出力されたJavaScriptファイルのみです。
 
 ### UIアプリケーションの作成
 
@@ -229,12 +228,12 @@ module.exports = {
 ### PHPアプリケーションの実行
 
 ```bash
-yarn run dev
+npm run dev
 ```
 
 ライブアップデートで実行します。PHPファイルの変更があれば自動でリロードされ、Reactのコンポーネントに変更があれば、リロードなしでコンポーネントがアップデートされます。
 
-ライブアップデートなしで実行する場合は`yarn run start`を実行します。
+ライブアップデートなしで実行する場合は`npm run start`を実行します。
 
 `lint`や`test`などの他のコマンドについては、[コマンド](https://github.com/koriym/Koriym.JsUiSkeleton/blob/1.x/README.ja.md#コマンド)をご覧ください。
 
@@ -272,7 +271,6 @@ APCu以外のキャッシュを利用するには、`ApcSsrModule`のコード�
 * [Karma テストランナー](http://karma-runner.github.io/1.0/index.html)
 * [Mocha テストフレームワーク](https://mochajs.org/)
 * [Chai アサーションライブラリ](http://chaijs.com/)
-* [Yarn パッケージマネージャー](https://yarnpkg.com/)
 * [Webpack モジュールバンドラー](https://webpack.js.org/)
 
 ## その他ビューライブラリ
