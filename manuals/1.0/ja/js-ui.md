@@ -11,7 +11,7 @@ permalink: /manuals/1.0/ja/js-ui.html
 
 ## 前提条件
 
-* PHP 7.1以上
+* PHP 8.2以上
 * [Node.js](https://nodejs.org/ja/)
 * [yarn](https://yarnpkg.com/)
 * [V8Js](http://php.net/manual/ja/book.v8js.php)（開発時はオプション）
@@ -156,9 +156,9 @@ class AppModule extends AbstractAppModule
 
 `$build`フォルダはJavaScriptファイルがあるディレクトリです（`ui/ui.config.js`で指定するwebpackの出力先）。
 
-### @Ssrアノテーション
+### #[Ssr]アトリビュート
 
-リソースをSSRするメソッドに`@Ssr`とアノテートします。`app`にJavaScriptアプリケーション名を指定する必要があります：
+リソースをSSRするメソッドに`#[Ssr]`アトリビュートを付与します。`app`にJavaScriptアプリケーション名を指定する必要があります：
 
 ```php
 <?php
@@ -169,10 +169,8 @@ use BEAR\SsrModule\Annotation\Ssr;
 
 class Index extends ResourceObject
 {
-    /**
-     * @Ssr(app="index_ssr")
-     */
-    public function onGet($name = 'BEAR.Sunday')
+    #[Ssr(app: 'index_ssr')]
+    public function onGet(string $name = 'BEAR.Sunday'): static
     {
         $this->body = [
             'hello' => ['name' => $name]
@@ -187,14 +185,8 @@ class Index extends ResourceObject
 CSRとSSRの値を区別して渡したい場合は、`state`と`metas`でbodyのキーを指定します：
 
 ```php
-/**
- * @Ssr(
- *     app="index_ssr",
- *     state={"name", "age"},
- *     metas={"title"}
- * )
- */
-public function onGet()
+#[Ssr(app: 'index_ssr', state: ['name', 'age'], metas: ['title'])]
+public function onGet(): static
 {
     $this->body = [
         'name' => 'World',
@@ -239,8 +231,11 @@ yarn run dev
 V8のスナップショットをAPCuに保存する機能を使って、パフォーマンスの大幅な向上が可能です。`ProdModule`で`ApcSsrModule`をインストールしてください。Reactやアプリケーションのスナップショットが`APCu`に保存され再利用されます。V8Jsが必要です：
 
 ```php
-$this->install(new ApcSsrModule);
+$bundleSrcBasePath = dirname(__DIR__, 2) . '/var/www/build';
+$this->install(new ApcSsrModule($bundleSrcBasePath));
 ```
+
+`$bundleSrcBasePath`はJavaScriptバンドルファイルがあるディレクトリのパスです。
 
 APCu以外のキャッシュを利用するには、`ApcSsrModule`のコードを参考にモジュールを作成してください。PSR-16対応のキャッシュが利用可能です。
 

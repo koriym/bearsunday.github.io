@@ -13,7 +13,7 @@ Currently within our project architecture, we will only be making changes to ann
 
 ## Prerequisites
 
- * PHP 7.1
+ * PHP 8.2+
  * [Node.js](https://nodejs.org/)
  * [yarn](https://yarnpkg.com/)
  * [V8Js](http://php.net/manual/en/book.v8js.php) (Development option)
@@ -161,11 +161,11 @@ class AppModule extends AbstractAppModule
 The `$build` directory is where the JS files live.(The Webpack output location set in `ui/ui.config.js`)
 
 
-### @Ssr Annotation
+### #[Ssr] Attribute
 
-Annotate the resource function to be SSR'd with `@Ssr`. The JS application name is required in `app`.
+Annotate the resource function to be SSR'd with `#[Ssr]`. The JS application name is required in `app`.
 
-```php?start_inline
+```php
 <?php
 
 namespace MyVendor\MyRedux\Resource\Page;
@@ -175,10 +175,8 @@ use BEAR\SsrModule\Annotation\Ssr;
 
 class Index extends ResourceObject
 {
-    /**
-     * @Ssr(app="index_ssr")
-     */
-    public function onGet($name = 'BEAR.Sunday')
+    #[Ssr(app: 'index_ssr')]
+    public function onGet(string $name = 'BEAR.Sunday'): static
     {
         $this->body = [
             'hello' => ['name' => $name]
@@ -191,19 +189,13 @@ class Index extends ResourceObject
 
 When you want to pass in distinct values for SSR and CSR set a key in `state` and `metas`.
 
-```php?start_inline
-/**
- * @Ssr(
- *   app="index_ssr",
- *   state={"name", "age"},
- *   metas={"title"}
- * )
- */
-public function onGet()
+```php
+#[Ssr(app: 'index_ssr', state: ['name', 'age'], metas: ['title'])]
+public function onGet(): static
 {
     $this->body = [
         'name' => 'World',
-        'age' => 4.6E8;
+        'age' => 4.6E8,
         'title' => 'Age of the World'
     ];
 
@@ -243,10 +235,14 @@ For other commands such `lint` or `test` etc. please see [commands](https://gith
 The ability to save the V8 Snapshot into APC means we can see dramatic performance benefits. In `ProdModule` install `ApcSsrModule`.
 ReactJs or your application snapshot is saved in `APCu` and can be reused. V8 is required.
 
-```php?start_inline
-$this->install(new ApcSsrModule);
+```php
+$bundleSrcBasePath = dirname(__DIR__, 2) . '/var/www/build';
+$this->install(new ApcSsrModule($bundleSrcBasePath));
 ```
-To use caches other than APC look at  the code in `ApcSsrModule` as a reference to make your own module. It is possible to use a cache compatible with PSR16.
+
+The `$bundleSrcBasePath` is the directory path where the JavaScript bundle files are located.
+
+To use caches other than APC look at the code in `ApcSsrModule` as a reference to make your own module. It is possible to use a cache compatible with PSR16.
 
 In order to tune performance at compile time pulling in your JS code (and ReactJs etc) into the V8 snapshot can give you further performance improvements.
 For more info please see the following.
