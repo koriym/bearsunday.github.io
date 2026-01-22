@@ -5,11 +5,21 @@ category: Manual
 permalink: /manuals/1.0/en/js-ui.html
 ---
 
-# Javascript UI
+# JavaScript UI
 
-Instead of rendering views with PHP template engines such Twig etc, we will be doing so using server-side JavaScript. On the PHP side we will be carrying out the authorisation, authentication, initialization and API delivery then we will do the rendering of the UI using JS.
+Instead of rendering views with PHP template engines such as Twig, this module enables server-side JavaScript rendering. PHP handles authorization, authentication, initial state, and API delivery, while JavaScript renders the UI. Only resources with the `#[Ssr]` attribute are affected, making adoption straightforward within existing projects.
 
-Currently within our project architecture, we will only be making changes to annotated resources so should be simple.
+## Background and Use Cases
+
+This module was developed to enable JavaScript server-side rendering (SSR) within PHP applications.
+
+Today, JavaScript ecosystem frameworks like Next.js, Nuxt, and Remix provide mature solutions for SSR entirely within JavaScript. For new projects with JavaScript-centric UIs, these frameworks are typically the preferred choice.
+
+This module is suited for the following scenarios:
+
+- Adding React or Vue.js UI to specific pages in an existing BEAR.Sunday project
+- Keeping PHP as the primary backend while using JavaScript rendering for selected views
+- Maintaining a single PHP application without separating frontend and backend
 
 ## Prerequisites
 
