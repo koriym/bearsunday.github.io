@@ -37,6 +37,7 @@
 - [Resource Link](/manuals/1.0/en/resource_link.md): Linking resources together
 - [Rendering](/manuals/1.0/en/resource_renderer.md): Output representations (HTML, JSON)
 - [HTML](/manuals/1.0/en/html.md): Template rendering with Twig/Qiq
+- [JavaScript SSR](/manuals/1.0/en/js-ui.md): Server-side JavaScript rendering with V8Js
 - [Form](/manuals/1.0/en/form.md): Form handling and validation
 - [Validation](/manuals/1.0/en/validation.md): Input validation with JSON Schema
 - [Content Negotiation](/manuals/1.0/en/content-negotiation.md): Accept header handling

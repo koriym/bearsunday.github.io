@@ -1,11 +1,11 @@
 ---
 layout: docs-ja
-title: JavaScript UI
+title: JavaScript SSR
 category: Manual
 permalink: /manuals/1.0/ja/js-ui.html
 ---
 
-# JavaScript UI
+# JavaScript SSR
 
 ビューのレンダリングをTwigなどのPHPのテンプレートエンジンが行う代わりに、サーバーサイドのJavaScriptが実行します。PHP側は認証・認可・初期状態・APIの提供を行い、JavaScriptがUIをレンダリングします。既存のプロジェクトの構造で、アトリビュートが付与されたリソースのみに適用されるため、導入が容易です。
 
