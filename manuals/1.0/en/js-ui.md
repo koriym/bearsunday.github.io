@@ -17,9 +17,11 @@ Today, JavaScript ecosystem frameworks like Next.js, Nuxt, and Remix provide mat
 
 This module is suited for the following scenarios:
 
+- Rendering most pages with Qiq or Twig, while using JS UI only for pages requiring high interactivity
 - Adding React or Vue.js UI to specific pages in an existing BEAR.Sunday project
-- Keeping PHP as the primary backend while using JavaScript rendering for selected views
 - Maintaining a single PHP application without separating frontend and backend
+
+Only resources with the `#[Ssr]` attribute are rendered with JS UI, allowing easy coexistence with traditional template engines.
 
 ## Prerequisites
 
