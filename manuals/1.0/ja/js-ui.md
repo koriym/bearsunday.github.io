@@ -41,7 +41,7 @@ permalink: /manuals/1.0/ja/js-ui.html
 
 ### インストール
 
-プロジェクトに`koriym/ssr-module`をインストールします：
+プロジェクトに`bear/ssr-module`をインストールします：
 
 ```bash
 # 新規プロジェクトの場合
@@ -111,7 +111,7 @@ const render = state => (
 );
 ```
 
-`ui/src/page/index/hello/server.js`として保存して、webpackのエントリーポイントを`ui/entry.js`に登録します：
+`ui/src/page/hello/server.js`として保存して、webpackのエントリーポイントを`ui/entry.js`に登録します：
 
 ```javascript
 module.exports = {
@@ -126,9 +126,7 @@ module.exports = {
 ```php
 <?php
 $app = 'hello';
-$state = [
-    ['name' => 'World']
-];
+$state = ['name' => 'World'];
 $metas = [];
 
 return [$app, $state, $metas];
@@ -213,7 +211,7 @@ public function onGet(): static
 
 実際に`state`と`metas`をどのように渡してSSRを実現するかは、`ui/src/page/index/server`のサンプルアプリケーションをご覧ください。
 
-影響を受けるのはアノテートしたメソッドだけで、APIやHTMLのレンダリングの設定はそのままです。
+影響を受けるのはアトリビュートを付与したメソッドだけで、APIやHTMLのレンダリングの設定はそのままです。
 
 ### PHPアプリケーションの実行設定
 
