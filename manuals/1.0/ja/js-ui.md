@@ -20,6 +20,7 @@ permalink: /manuals/1.0/ja/js-ui.html
 - 大部分のページは既存のテンプレートエンジンでレンダリングし、高度なインタラクティブ性が求められる一部のページのみJS UIを使いたい
 - 既存のBEAR.Sundayプロジェクトに、特定のページのみReactやVue.jsのUIを追加したい
 - フロントエンドとバックエンドを分離せず、単一のPHPアプリケーションとして運用したい
+- PHPチームとJSチームが`state/metas`を契約として並行開発したい
 
 `#[Ssr]`アトリビュートを付与したリソースのみがJS UIでレンダリングされるため、従来のテンプレートエンジンとの共存が容易です。
 
@@ -27,14 +28,9 @@ permalink: /manuals/1.0/ja/js-ui.html
 
 * PHP 8.2以上
 * [Node.js](https://nodejs.org/ja/)
-* [V8Js](http://php.net/manual/ja/book.v8js.php)（開発時はオプション）
+* [V8Js](https://www.php.net/manual/ja/book.v8js.php)（開発時はオプション）
 
 注：V8Jsがインストールされていない場合、Node.jsでJavaScriptが実行されます。
-
-## 用語
-
-* **CSR**: クライアントサイドレンダリング（Webブラウザで描画）
-* **SSR**: サーバーサイドレンダリング（サーバーサイドのV8またはNode.jsが描画）
 
 ## JavaScript
 
@@ -239,7 +235,7 @@ npm run dev
 
 ## パフォーマンス
 
-V8のスナップショットをAPCuに保存する機能を使って、パフォーマンスの大幅な向上が可能です。`ProdModule`で`ApcSsrModule`をインストールしてください。Reactやアプリケーションのスナップショットが`APCu`に保存され再利用されます。V8Jsが必要です：
+V8のスナップショットをAPCuに保存する機能を使って、パフォーマンスの向上が可能です。`ProdModule`で`ApcSsrModule`をインストールしてください。V8Jsが必要です：
 
 ```php
 $bundleSrcBasePath = dirname(__DIR__, 2) . '/var/www/build';
@@ -247,41 +243,3 @@ $this->install(new ApcSsrModule($bundleSrcBasePath));
 ```
 
 `$bundleSrcBasePath`はJavaScriptバンドルファイルがあるディレクトリのパスです。
-
-APCu以外のキャッシュを利用するには、`ApcSsrModule`のコードを参考にモジュールを作成してください。PSR-16対応のキャッシュが利用可能です。
-
-さらなる高速化のためには、V8をコンパイルする時点でJavaScriptコード（Reactなど）のスナップショットを取り込みます。詳しくは以下をご覧ください：
-
-* [20x performance boost with V8Js snapshots](http://stesie.github.io/2016/02/snapshot-performance)
-* [v8js - Possibility to Improve Performance with Precompiled Templates/Classes?](https://github.com/phpv8/v8js/issues/205)
-
-## デバッグ
-
-* Chromeプラグイン[React Developer Tools](https://chrome.google.com/webstore/detail/react-developer-tools/fmkadmapgofadopljbjfkapdkoienihi)、[Redux DevTools](https://chrome.google.com/webstore/detail/redux-devtools/lmhkpmbekcpmknklioeibfkpmmfibljd)が利用できます。
-* 500エラーが返ってくる場合は、`var/log`や`curl`でアクセスしてレスポンスの詳細を確認してみましょう。
-
-## リファレンス
-
-* [ECMAScript 6](http://postd.cc/es6-cheatsheet/)
-* [Airbnb JavaScript スタイルガイド](http://mitsuruog.github.io/javascript-style-guide/)
-* [React](https://facebook.github.io/react/)
-* [Redux](http://redux.js.org/)
-* [Redux GitHub](https://github.com/reactjs/redux)
-* [Redux DevTools](https://github.com/gaearon/redux-devtools)
-* [Karma テストランナー](http://karma-runner.github.io/1.0/index.html)
-* [Mocha テストフレームワーク](https://mochajs.org/)
-* [Chai アサーションライブラリ](http://chaijs.com/)
-* [Webpack モジュールバンドラー](https://webpack.js.org/)
-
-## その他ビューライブラリ
-
-* [Vue.js](https://jp.vuejs.org/)
-* [Handlebars.js](http://handlebarsjs.com/)
-* [doT.js](http://olado.github.io/doT/index.html)
-* [Pug](https://pugjs.org/api/getting-started.html)
-* [Hogan](http://twitter.github.io/hogan.js/)（Twitter）
-* [Nunjucks](https://mozilla.github.io/nunjucks/)（Mozilla）
-* [Dust.js](http://www.dustjs.com/)（LinkedIn）
-* [Marko](http://markojs.com/)（eBay）
-
-*以前のReact JSページは[ReactJs](reactjs.html)をご覧ください。*
