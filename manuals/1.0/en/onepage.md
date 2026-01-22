@@ -7538,7 +7538,7 @@ php -S 127.0.0.1:8080 -t public
 
 
 
-# Javascript UI
+# JavaScript SSR
 
 Instead of rendering views with PHP template engines such Twig etc, we will be doing so using server-side JavaScript. On the PHP side we will be carrying out the authorisation, authentication, initialization and API delivery then we will do the rendering of the UI using JS.
 

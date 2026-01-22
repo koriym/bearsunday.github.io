@@ -1,11 +1,11 @@
 ---
 layout: docs-en
-title: Javascript UI
+title: JavaScript SSR
 category: Manual
 permalink: /manuals/1.0/en/js-ui.html
 ---
 
-# JavaScript UI
+# JavaScript SSR
 
 Instead of rendering views with PHP template engines such as Twig, this module enables server-side JavaScript rendering. PHP handles authorization, authentication, initial state, and API delivery, while JavaScript renders the UI. Only resources with the `#[Ssr]` attribute are affected, making adoption straightforward within existing projects.
 
