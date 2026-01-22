@@ -7,13 +7,26 @@ permalink: /manuals/1.0/ja/js-ui.html
 
 # JavaScript UI
 
-ビューのレンダリングをTwigなどのPHPのテンプレートエンジンが行う代わりに、サーバーサイドのJavaScriptが実行します。PHP側は認証・認可・初期状態・APIの提供を行い、JavaScriptがUIをレンダリングします。既存のプロジェクトの構造で、アノテーションが付与されたリソースのみに適用されるため、導入が容易です。
+ビューのレンダリングをTwigなどのPHPのテンプレートエンジンが行う代わりに、サーバーサイドのJavaScriptが実行します。PHP側は認証・認可・初期状態・APIの提供を行い、JavaScriptがUIをレンダリングします。既存のプロジェクトの構造で、アトリビュートが付与されたリソースのみに適用されるため、導入が容易です。
+
+## 背景と適用場面
+
+このモジュールは、PHPアプリケーション内でJavaScriptによるサーバーサイドレンダリング（SSR）を実現するために開発されました。
+
+現在では、Next.js、Nuxt、Remixなど、JavaScriptエコシステム側でSSRを完結させるフレームワークが成熟しています。新規プロジェクトでJavaScript中心のUIを構築する場合、これらのフレームワークが第一選択となるでしょう。
+
+本モジュールが適しているのは以下のようなケースです：
+
+- 大部分のページは既存のテンプレートエンジンでレンダリングし、高度なインタラクティブ性が求められる一部のページのみJS UIを使いたい
+- 既存のBEAR.Sundayプロジェクトに、特定のページのみReactやVue.jsのUIを追加したい
+- フロントエンドとバックエンドを分離せず、単一のPHPアプリケーションとして運用したい
+
+`#[Ssr]`アトリビュートを付与したリソースのみがJS UIでレンダリングされるため、従来のテンプレートエンジンとの共存が容易です。
 
 ## 前提条件
 
-* PHP 7.1以上
+* PHP 8.2以上
 * [Node.js](https://nodejs.org/ja/)
-* [yarn](https://yarnpkg.com/)
 * [V8Js](http://php.net/manual/ja/book.v8js.php)（開発時はオプション）
 
 注：V8Jsがインストールされていない場合、Node.jsでJavaScriptが実行されます。
@@ -27,7 +40,7 @@ permalink: /manuals/1.0/ja/js-ui.html
 
 ### インストール
 
-プロジェクトに`koriym/ssr-module`をインストールします：
+プロジェクトに`bear/ssr-module`をインストールします：
 
 ```bash
 # 新規プロジェクトの場合
@@ -41,7 +54,7 @@ UIスケルトンアプリケーション`koriym/js-ui-skeleton`をインスト�
 composer require koriym/js-ui-skeleton 1.x-dev
 cp -r vendor/koriym/js-ui-skeleton/ui .
 cp -r vendor/koriym/js-ui-skeleton/package.json .
-yarn install
+npm install
 ```
 
 ### UIアプリケーションの実行
@@ -49,7 +62,7 @@ yarn install
 まずはデモアプリケーションを動かしてみましょう。表示されたWebページからレンダリング方法を選択して、JavaScriptアプリケーションを実行します：
 
 ```bash
-yarn run ui
+npm run ui
 ```
 
 このアプリケーションの入力は`ui/dev/config/`の設定ファイルで行います：
@@ -75,7 +88,7 @@ cp ui/dev/config/index.php ui/dev/config/myapp.php
 
 ブラウザをリロードして新しい設定を試します。このように、JavaScriptや本体のPHPアプリケーションを変更せずに、UIのデータを変更して動作を確認することができます。
 
-このセクションで編集したPHPの設定ファイルは、`yarn run ui`で実行する時のみに使用されます。PHP側が必要とするのは、バンドルされて出力されたJavaScriptファイルのみです。
+このセクションで編集したPHPの設定ファイルは、`npm run ui`で実行する時のみに使用されます。PHP側が必要とするのは、バンドルされて出力されたJavaScriptファイルのみです。
 
 ### UIアプリケーションの作成
 
@@ -97,7 +110,7 @@ const render = state => (
 );
 ```
 
-`ui/src/page/index/hello/server.js`として保存して、webpackのエントリーポイントを`ui/entry.js`に登録します：
+`ui/src/page/hello/server.js`として保存して、webpackのエントリーポイントを`ui/entry.js`に登録します：
 
 ```javascript
 module.exports = {
@@ -112,9 +125,7 @@ module.exports = {
 ```php
 <?php
 $app = 'hello';
-$state = [
-    ['name' => 'World']
-];
+$state = ['name' => 'World'];
 $metas = [];
 
 return [$app, $state, $metas];
@@ -156,9 +167,9 @@ class AppModule extends AbstractAppModule
 
 `$build`フォルダはJavaScriptファイルがあるディレクトリです（`ui/ui.config.js`で指定するwebpackの出力先）。
 
-### @Ssrアノテーション
+### #[Ssr]アトリビュート
 
-リソースをSSRするメソッドに`@Ssr`とアノテートします。`app`にJavaScriptアプリケーション名を指定する必要があります：
+リソースをSSRするメソッドに`#[Ssr]`アトリビュートを付与します。`app`にJavaScriptアプリケーション名を指定する必要があります：
 
 ```php
 <?php
@@ -169,10 +180,8 @@ use BEAR\SsrModule\Annotation\Ssr;
 
 class Index extends ResourceObject
 {
-    /**
-     * @Ssr(app="index_ssr")
-     */
-    public function onGet($name = 'BEAR.Sunday')
+    #[Ssr(app: 'index_ssr')]
+    public function onGet(string $name = 'BEAR.Sunday'): static
     {
         $this->body = [
             'hello' => ['name' => $name]
@@ -187,14 +196,8 @@ class Index extends ResourceObject
 CSRとSSRの値を区別して渡したい場合は、`state`と`metas`でbodyのキーを指定します：
 
 ```php
-/**
- * @Ssr(
- *     app="index_ssr",
- *     state={"name", "age"},
- *     metas={"title"}
- * )
- */
-public function onGet()
+#[Ssr(app: 'index_ssr', state: ['name', 'age'], metas: ['title'])]
+public function onGet(): static
 {
     $this->body = [
         'name' => 'World',
@@ -207,7 +210,7 @@ public function onGet()
 
 実際に`state`と`metas`をどのように渡してSSRを実現するかは、`ui/src/page/index/server`のサンプルアプリケーションをご覧ください。
 
-影響を受けるのはアノテートしたメソッドだけで、APIやHTMLのレンダリングの設定はそのままです。
+影響を受けるのはアトリビュートを付与したメソッドだけで、APIやHTMLのレンダリングの設定はそのままです。
 
 ### PHPアプリケーションの実行設定
 
@@ -225,12 +228,12 @@ module.exports = {
 ### PHPアプリケーションの実行
 
 ```bash
-yarn run dev
+npm run dev
 ```
 
 ライブアップデートで実行します。PHPファイルの変更があれば自動でリロードされ、Reactのコンポーネントに変更があれば、リロードなしでコンポーネントがアップデートされます。
 
-ライブアップデートなしで実行する場合は`yarn run start`を実行します。
+ライブアップデートなしで実行する場合は`npm run start`を実行します。
 
 `lint`や`test`などの他のコマンドについては、[コマンド](https://github.com/koriym/Koriym.JsUiSkeleton/blob/1.x/README.ja.md#コマンド)をご覧ください。
 
@@ -239,8 +242,11 @@ yarn run dev
 V8のスナップショットをAPCuに保存する機能を使って、パフォーマンスの大幅な向上が可能です。`ProdModule`で`ApcSsrModule`をインストールしてください。Reactやアプリケーションのスナップショットが`APCu`に保存され再利用されます。V8Jsが必要です：
 
 ```php
-$this->install(new ApcSsrModule);
+$bundleSrcBasePath = dirname(__DIR__, 2) . '/var/www/build';
+$this->install(new ApcSsrModule($bundleSrcBasePath));
 ```
+
+`$bundleSrcBasePath`はJavaScriptバンドルファイルがあるディレクトリのパスです。
 
 APCu以外のキャッシュを利用するには、`ApcSsrModule`のコードを参考にモジュールを作成してください。PSR-16対応のキャッシュが利用可能です。
 
@@ -265,7 +271,6 @@ APCu以外のキャッシュを利用するには、`ApcSsrModule`のコード�
 * [Karma テストランナー](http://karma-runner.github.io/1.0/index.html)
 * [Mocha テストフレームワーク](https://mochajs.org/)
 * [Chai アサーションライブラリ](http://chaijs.com/)
-* [Yarn パッケージマネージャー](https://yarnpkg.com/)
 * [Webpack モジュールバンドラー](https://webpack.js.org/)
 
 ## その他ビューライブラリ

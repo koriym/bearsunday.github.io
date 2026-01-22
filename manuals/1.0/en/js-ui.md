@@ -5,31 +5,42 @@ category: Manual
 permalink: /manuals/1.0/en/js-ui.html
 ---
 
-# Javascript UI
+# JavaScript UI
 
-Instead of rendering views with PHP template engines such Twig etc, we will be doing so using server-side JavaScript. On the PHP side we will be carrying out the authorisation, authentication, initialization and API delivery then we will do the rendering of the UI using JS.
+Instead of rendering views with PHP template engines such as Twig, this module enables server-side JavaScript rendering. PHP handles authorization, authentication, initial state, and API delivery, while JavaScript renders the UI. Only resources with the `#[Ssr]` attribute are affected, making adoption straightforward within existing projects.
 
-Currently within our project architecture, we will only be making changes to annotated resources so should be simple.
+## Background and Use Cases
+
+This module was developed to enable JavaScript server-side rendering (SSR) within PHP applications.
+
+Today, JavaScript ecosystem frameworks like Next.js, Nuxt, and Remix provide mature solutions for SSR entirely within JavaScript. For new projects with JavaScript-centric UIs, these frameworks are typically the preferred choice.
+
+This module is suited for the following scenarios:
+
+- Rendering most pages with your existing template engine, while using JS UI only for pages requiring high interactivity
+- Adding React or Vue.js UI to specific pages in an existing BEAR.Sunday project
+- Maintaining a single PHP application without separating frontend and backend
+
+Only resources with the `#[Ssr]` attribute are rendered with JS UI, allowing easy coexistence with traditional template engines.
 
 ## Prerequisites
 
- * PHP 7.1
- * [Node.js](https://nodejs.org/)
- * [yarn](https://yarnpkg.com/)
- * [V8Js](http://php.net/manual/en/book.v8js.php) (Development option)
+* PHP 8.2+
+* [Node.js](https://nodejs.org/)
+* [V8Js](http://php.net/manual/en/book.v8js.php) (Development option)
 
 Note: If you do not install V8Js then JS will be run using Node.js.
 
 ## Terminology
 
- * **CSR** Client Side Rendering (via Web Browser)
- * **SSR** Server Side Rendering (via V8 or Node.js)
+* **CSR** Client Side Rendering (via Web Browser)
+* **SSR** Server Side Rendering (via V8 or Node.js)
 
 ## JavaScript
 
 ### Installation
 
-Install `koriym/ssr-module` into the project.
+Install `bear/ssr-module` into the project.
 
 ```bash
 // composer create-project bear/skeleton MyVendor.MyProject && cd MyVendor.MyProject;
@@ -42,7 +53,7 @@ Install the UI skeleton app `koriym/js-ui-skeleton`.
 composer require koriym/js-ui-skeleton 1.x-dev
 cp -r vendor/koriym/js-ui-skeleton/ui .
 cp -r vendor/koriym/js-ui-skeleton/package.json .
-yarn install
+npm install
 ```
 
 ### Running the UI application
@@ -51,7 +62,7 @@ Lets start by running the demo application.
 From the displayed web page lets select the rendering engine and run the JS application.
 
 ```
-yarn run ui
+npm run ui
 ```
 This applications inputs can be set using the `ui/dev/config/` config files.
 
@@ -77,7 +88,7 @@ Reload the browser and try out the new settings.
 
 In this way without changing the JavaScript or core PHP application we can alter the UI data and check that it is working.
 
-The PHP configuration files that have been edited in this section are only used when executing `yarn run ui`.
+The PHP configuration files that have been edited in this section are only used when executing `npm run ui`.
 All the PHP side needs is the output bundled JS file.
 
 
@@ -102,7 +113,7 @@ const render = state => (
 )
 ```
 
-Save this as `ui/src/page/index/hello/server.js` and register this as a Webpack entry point in`ui/entry.js`.
+Save this as `ui/src/page/hello/server.js` and register this as a Webpack entry point in `ui/entry.js`.
 
 ```javascript?start_inline
 module.exports = {
@@ -114,12 +125,10 @@ Having done this a `hello.bundle.js` bundled file is created for us.
 
 Create a file at `ui/dev/config/myapp.php` to test run this application.
 
-```php?
+```php
 <?php
 $app = 'hello';
-$state = [
-    ['name' => 'World']
-];
+$state = ['name' => 'World'];
 $metas = [];
 
 return [$app, $state, $metas];
@@ -161,11 +170,11 @@ class AppModule extends AbstractAppModule
 The `$build` directory is where the JS files live.(The Webpack output location set in `ui/ui.config.js`)
 
 
-### @Ssr Annotation
+### #[Ssr] Attribute
 
-Annotate the resource function to be SSR'd with `@Ssr`. The JS application name is required in `app`.
+Annotate the resource function to be SSR'd with `#[Ssr]`. The JS application name is required in `app`.
 
-```php?start_inline
+```php
 <?php
 
 namespace MyVendor\MyRedux\Resource\Page;
@@ -175,10 +184,8 @@ use BEAR\SsrModule\Annotation\Ssr;
 
 class Index extends ResourceObject
 {
-    /**
-     * @Ssr(app="index_ssr")
-     */
-    public function onGet($name = 'BEAR.Sunday')
+    #[Ssr(app: 'index_ssr')]
+    public function onGet(string $name = 'BEAR.Sunday'): static
     {
         $this->body = [
             'hello' => ['name' => $name]
@@ -191,19 +198,13 @@ class Index extends ResourceObject
 
 When you want to pass in distinct values for SSR and CSR set a key in `state` and `metas`.
 
-```php?start_inline
-/**
- * @Ssr(
- *   app="index_ssr",
- *   state={"name", "age"},
- *   metas={"title"}
- * )
- */
-public function onGet()
+```php
+#[Ssr(app: 'index_ssr', state: ['name', 'age'], metas: ['title'])]
+public function onGet(): static
 {
     $this->body = [
         'name' => 'World',
-        'age' => 4.6E8;
+        'age' => 4.6E8,
         'title' => 'Age of the World'
     ];
 
@@ -230,11 +231,11 @@ module.exports = {
 ### Running the PHP application
 
 ```
-yarn run dev
+npm run dev
 ```
 
 Run using live updating.
-When the PHP file is changed it will be automatically reloaded, if there is a change in a React component without hitting refresh the component will update. If you want to run the app without live updating you can by running `yarn run start`.
+When the PHP file is changed it will be automatically reloaded, if there is a change in a React component without hitting refresh the component will update. If you want to run the app without live updating you can by running `npm run start`.
 
 For other commands such `lint` or `test` etc. please see [commands](https://github.com/koriym/Koriym.JsUiSkeleton/blob/1.x/README.md#command).
 
@@ -243,44 +244,46 @@ For other commands such `lint` or `test` etc. please see [commands](https://gith
 The ability to save the V8 Snapshot into APC means we can see dramatic performance benefits. In `ProdModule` install `ApcSsrModule`.
 ReactJs or your application snapshot is saved in `APCu` and can be reused. V8 is required.
 
-```php?start_inline
-$this->install(new ApcSsrModule);
+```php
+$bundleSrcBasePath = dirname(__DIR__, 2) . '/var/www/build';
+$this->install(new ApcSsrModule($bundleSrcBasePath));
 ```
-To use caches other than APC look at  the code in `ApcSsrModule` as a reference to make your own module. It is possible to use a cache compatible with PSR16.
+
+The `$bundleSrcBasePath` is the directory path where the JavaScript bundle files are located.
+
+To use caches other than APC look at the code in `ApcSsrModule` as a reference to make your own module. It is possible to use a cache compatible with PSR16.
 
 In order to tune performance at compile time pulling in your JS code (and ReactJs etc) into the V8 snapshot can give you further performance improvements.
 For more info please see the following.
 
- * [20x performance boost with V8Js snapshots](http://stesie.github.io/2016/02/snapshot-performance)
- * [v8js - Possibility to Improve Performance with Precompiled Templates/Classes ?](https://github.com/phpv8/v8js/issues/205)
+* [20x performance boost with V8Js snapshots](http://stesie.github.io/2016/02/snapshot-performance)
+* [v8js - Possibility to Improve Performance with Precompiled Templates/Classes?](https://github.com/phpv8/v8js/issues/205)
 
 ## Debugging
 
- * Chrome Plugin [React developer tools](https://chrome.google.com/webstore/detail/react-developer-tools/fmkadmapgofadopljbjfkapdkoienihi) or [Redux devTools]( https://chrome.google.com/webstore/detail/redux-devtools/lmhkpmbekcpmknklioeibfkpmmfibljd) can be used.
- * When a 500 error is returned look at the response details by using `var/log` or `curl` etc.
-
+* Chrome Plugin [React developer tools](https://chrome.google.com/webstore/detail/react-developer-tools/fmkadmapgofadopljbjfkapdkoienihi) or [Redux devTools](https://chrome.google.com/webstore/detail/redux-devtools/lmhkpmbekcpmknklioeibfkpmmfibljd) can be used.
+* When a 500 error is returned look at the response details by using `var/log` or `curl` etc.
 
 ## References
 
- * [ECMAScript 6](http://postd.cc/es6-cheatsheet/)
- * [Airbnb JavaScript Styleguide](https://github.com/airbnb/javascript)
- * [React](https://facebook.github.io/react/)
- * [Redux](http://redux.js.org/)
- * [Redux github](https://github.com/reactjs/redux)
- * [Redux devtools](https://github.com/gaearon/redux-devtools)
- * [Karma test runner](http://karma-runner.github.io/1.0/index.html)
- * [Mocha test framework](https://mochajs.org/)
- * [Chai assertion library](http://chaijs.com/)
- * [Yarn package manager](https://yarnpkg.com/)
- * [Webpack module bundler](https://webpack.js.org/)
+* [ECMAScript 6](http://postd.cc/es6-cheatsheet/)
+* [Airbnb JavaScript Styleguide](https://github.com/airbnb/javascript)
+* [React](https://facebook.github.io/react/)
+* [Redux](http://redux.js.org/)
+* [Redux GitHub](https://github.com/reactjs/redux)
+* [Redux DevTools](https://github.com/gaearon/redux-devtools)
+* [Karma test runner](http://karma-runner.github.io/1.0/index.html)
+* [Mocha test framework](https://mochajs.org/)
+* [Chai assertion library](http://chaijs.com/)
+* [Webpack module bundler](https://webpack.js.org/)
 
 ## Other view libraries
 
-  * [Vue.js](https://vuejs.org/)
-  * [Handlesbar.js](http://handlebarsjs.com/)
-  * [doT.js](http://olado.github.io/doT/index.html)
-  * [pug](https://pugjs.org/api/getting-started.html)
-  * [Hogan](http://twitter.github.io/hogan.js/) (Twitter)
-  * [Nunjucks](https://mozilla.github.io/nunjucks/)(Mozilla)
-  * [dust.js](http://www.dustjs.com/) (LinkedIn)
-  * [marko](http://markojs.com/) (Ebay)
+* [Vue.js](https://vuejs.org/)
+* [Handlebars.js](http://handlebarsjs.com/)
+* [doT.js](http://olado.github.io/doT/index.html)
+* [Pug](https://pugjs.org/api/getting-started.html)
+* [Hogan](http://twitter.github.io/hogan.js/) (Twitter)
+* [Nunjucks](https://mozilla.github.io/nunjucks/) (Mozilla)
+* [Dust.js](http://www.dustjs.com/) (LinkedIn)
+* [Marko](http://markojs.com/) (eBay)
