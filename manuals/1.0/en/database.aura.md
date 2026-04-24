@@ -45,6 +45,21 @@ class AppModule extends AbstractAppModule
 }
 ```
 
+To retrieve connection settings from environment variables on every request rather than specifying values directly at configuration time, use `AuraSqlEnvModule`. Instead of supplying the DSN and credentials directly, pass the keys of the corresponding environment variables.
+
+```php?start_inline
+$this->install(
+    new AuraSqlEnvModule(
+        'PDO_DSN',      // getenv('PDO_DSN')
+        'PDO_USER',     // getenv('PDO_USER')
+        'PDO_PASSWORD', // getenv('PDO_PASSWORD')
+        'PDO_SLAVE',    // getenv('PDO_SLAVE')
+        $options,       // optional key=>value array of driver-specific connection options
+        $queries        // Queries to execute after the connection.
+    )
+);
+```
+
 Now the `DI` bindings are ready. The db object will be injected via a constructor or the `AuraSqlInject` setter trait.
 
 ```php?start_inline
@@ -76,6 +91,123 @@ class Index
 
 `Ray.AuraSqlModule` contains [Aura.SqlQuery](https://github.com/auraphp/Aura.SqlQuery) to help you build sql queries.
 [Aura.SqlQuery](https://github.com/auraphp/Aura.SqlQuery) also have other useful methods like [Array Quoting](https://github.com/auraphp/Aura.Sql/tree/2.x#array-quoting), [fetch*()](https://github.com/auraphp/Aura.Sql/tree/2.x#new-fetch-methods), [perform()](https://github.com/auraphp/Aura.Sql/tree/2.x#the-perform-method) and [yield*()](https://github.com/auraphp/Aura.Sql/tree/2.x#new-yield-methods) that you can use for your needs, please check their documentation.
+
+### perform() method
+
+The `perform()` method lets you bind an array of values to a SQL statement that contains a single placeholder.
+
+```php?start_inline
+$stm = 'SELECT * FROM test WHERE foo IN (:foo)';
+$array = ['foo', 'bar', 'baz'];
+```
+
+With a regular PDO:
+
+```php?start_inline
+// the native PDO way does not work (PHP Notice: Array to string conversion)
+$sth = $pdo->prepare($stm);
+$sth->bindValue('foo', $array);
+```
+
+With Aura.Sql's ExtendedPDO:
+
+```php?start_inline
+$stm = 'SELECT * FROM test WHERE foo IN (:foo)';
+$values = ['foo' => ['foo', 'bar', 'baz']];
+$sth = $pdo->perform($stm, $values);
+```
+
+The placeholder `:foo` is bound to `['foo', 'bar', 'baz']`. You can inspect the actual query through `queryString`.
+
+```php?start_inline
+echo $sth->queryString;
+// the query string has been modified by ExtendedPdo to become
+// "SELECT * FROM test WHERE foo IN ('foo', 'bar', 'baz')"
+```
+
+### fetch*() methods
+
+Instead of repeatedly calling `prepare()`, `bindValue()`, and `execute()` to retrieve values from the database, the `fetch*()` methods reduce boilerplate code. (Internally they call `perform()`, so array placeholders are also supported.)
+
+```php?start_inline
+$stm = 'SELECT * FROM test WHERE foo = :foo AND bar = :bar';
+$bind = ['foo' => 'baz', 'bar' => 'dib'];
+
+// "fetch all" the native PDO way
+$pdo = new PDO(...);
+$sth = $pdo->prepare($stm);
+$sth->execute($bind);
+$result = $sth->fetchAll(PDO::FETCH_ASSOC);
+
+// "fetch all" with ExtendedPdo
+$pdo = new ExtendedPdo(...);
+$result = $pdo->fetchAll($stm, $bind);
+
+// fetchAssoc() returns an associative array of all rows where the key is the
+// first column, and the row arrays are keyed on the column names
+$result = $pdo->fetchAssoc($stm, $bind);
+
+// fetchGroup() behaves like fetchAssoc(), but the values are not wrapped in
+// arrays. Instead, single column values are returned as a 1-dimensional array
+// and multiple columns are returned as an array of arrays. Set the style to
+// PDO::FETCH_NAMED when the value is an array (i.e. when there are two or
+// more columns in the SELECT).
+$result = $pdo->fetchGroup($stm, $bind, $style = PDO::FETCH_COLUMN);
+
+// fetchOne() returns the first row as an associative array where the keys are
+// the column names
+$result = $pdo->fetchOne($stm, $bind);
+
+// fetchPairs() returns an associative array where each key is the first
+// column and each value is the second column
+$result = $pdo->fetchPairs($stm, $bind);
+
+// fetchValue() returns the value of the first column in the first row
+$result = $pdo->fetchValue($stm, $bind);
+
+// fetchAffected() returns the number of affected rows
+$stm = "UPDATE test SET incr = incr + 1 WHERE foo = :foo AND bar = :bar";
+$row_count = $pdo->fetchAffected($stm, $bind);
+```
+
+The `fetchAll()`, `fetchAssoc()`, `fetchCol()`, and `fetchPairs()` methods accept an optional third argument: a callable applied to each row.
+
+```php?start_inline
+$result = $pdo->fetchAssoc($stm, $bind, function (&$row) {
+    // add a column to the row
+    $row['my_new_col'] = 'Added this column from the callable.';
+});
+```
+
+### yield*() methods
+
+To save memory you can use the `yield*()` methods. While the `fetch*()` methods retrieve all rows at once, the `yield*()` methods return an iterator.
+
+```php?start_inline
+$stm = 'SELECT * FROM test WHERE foo = :foo AND bar = :bar';
+$bind = ['foo' => 'baz', 'bar' => 'dib'];
+
+// like fetchAll(), each row is an associative array
+foreach ($pdo->yieldAll($stm, $bind) as $row) {
+    // ...
+}
+
+// like fetchAssoc(), the key is the first column and the row is an
+// associative array
+foreach ($pdo->yieldAssoc($stm, $bind) as $key => $row) {
+    // ...
+}
+
+// like fetchCol(), the value is the first column
+foreach ($pdo->yieldCol($stm, $bind) as $val) {
+    // ...
+}
+
+// like fetchPairs(), key/value pairs come from the first two columns
+foreach ($pdo->yieldPairs($stm, $bind) as $key => $val) {
+    // ...
+}
+```
 
 ## Replication
 
@@ -187,6 +319,20 @@ $this->install(
     'slave1,slave2' // specify slave IP as a comma separated value
   )
 );
+```
+
+To retrieve connection information from environment variables on each request, use `NamedPdoEnvModule`.
+
+```php?start_inline
+class AppModule extends AbstractAppModule
+{
+    protected function configure()
+    {
+        // ...
+        $this->install(new NamedPdoEnvModule(Log::class, 'LOG_DSN', 'LOG_USERNAME'));
+        $this->install(new NamedPdoEnvModule(Mail::class, 'MAIL_DSN', 'MAIL_USERNAME'));
+    }
+}
 ```
 
 ## Transactions
