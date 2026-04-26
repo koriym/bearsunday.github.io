@@ -106,32 +106,7 @@ class BlogPosting extends ResourceObject
 }
 ```
 
-### recursive donut
-
-<img width="191" alt="recursive donut 2021-10-19 21 27 06" src="https://user-images.githubusercontent.com/529021/137909083-2c5176f7-edb7-422b-bccc-1db90460fc15.png">
-
-The donut structure will be recursively applied.
-For example, if A contains B and B contains C and C is modified, A's cache and B's cache will be reused except for the modified C. A's and B's caches and ETags will be regenerated, but DB access to retrieve A's and B's content and rendering of views will not be done.
-
-The optimized structure of the partial cache performs content regeneration with minimal cost. The client does not need to know about the content cache structure.
-
-## Event-driven content
-
-Traditionally, CDNs have believed that content that requires application logic is "dynamic" and therefore cannot be cached by a CDN. However, some CDNs, such as Fastly and Akamai, allow immediate or tag-based cache invalidation within seconds, [this idea is a thing of the past](https://www.fastly.com/blog/leveraging-your-cdn-cache- uncacheable-content).
-
-Sunday dependency resolution is done not only on the server side, but also on the shared cache; when AOP detects a change and makes a PURGE request to the shared cache, the related cache on the shared cache will be invalidated, just like on the server side.
-
-## Conditional request
-
-<img width="468" alt="conditional request" src="https://user-images.githubusercontent.com/529021/137151061-8d7a5605-3aa3-494c-91c5-c1 deddd987dd.png">
-
-Content changes are managed by AOP, and the entity tag (ETag) of the content is automatically updated. conditional requests for HTTP using ETag not only minimize the use of computational resources, but responses that only return `304 Not Modified` also minimize the use of network resources. Conditional HTTP requests using ETag not only minimize the use of computational resources, but also minimize the use of network resources by simply returning `304 Not Modified`.
-
-
-# Usage
-
-Give the class to be cached the attribute `#[DonutCache]` if it is a donut cache (embedded content is not cacheable) and `#[CacheableResponse]` otherwise.
-
+If you want to specify which methods to cache, add the attribute to the method instead of the class. In that case, add the `#[RefreshCache]` attribute to methods that modify the cache:
 
 ```php
 class Todo extends ResourceObject
@@ -144,19 +119,15 @@ class Todo extends ResourceObject
     #[RefreshCache]
     public function onDelete(int $id = 0): static
     {
-    }	
+    }
 }
 ```
 
-If you give attributes in either way, all the features introduced in the overview will apply.
-Caching is not disabled by time (TTL) by default, assuming event-driven content
-
-Note that with `#[DonutCache]` the whole content will not be cached, but with `#[CacheableResponse]` it will be.
+Whichever way you add attributes, all the features introduced in the overview will apply. By default, cache invalidation by time (TTL) is not performed, assuming event-driven content. Note that with `#[DonutCache]` the entire content is not cached, but with `#[CacheableResponse]` it is.
 
 ## TTL
 
-TTL is specified with `DonutRepositoryInterface::put()`.
-`ttl` is the cache time for non-donut holes, `sMaxAge` is the cache time for CDNs.
+TTL is specified with `DonutRepositoryInterface::put()`. `ttl` is the cache time for non-donut holes, `sMaxAge` is the cache time for CDNs:
 
 ```php
 use BEAR\RepositoryModule\Annotation\CacheableResponse;
@@ -165,30 +136,30 @@ use BEAR\RepositoryModule\Annotation\CacheableResponse;
 class BlogPosting extends ResourceObject
 {
     public function __construct(private DonutRepositoryInterface $repository)
-    {}
+    {
+    }
 
     #[Embed(rel: "comment", src: "page://self/html/comment")]
     public function onGet(): static
     {
         // process ...
-        $this->repository->put($this, ttl:10, sMaxAge:100);　
-
+        $this->repository->put($this, ttl: 10, sMaxAge: 100);
         return $this;
     }
 }
 ```
-### Default TTL value
 
-For event-driven content, changes to the content must be reflected immediately in the cache, so the default TTL varies depending on the CDN module installed. Therefore, the default TTL will vary depending on the CDN module installed: indefinitely (1 year) if the CDN supports tag-based disabling of caching, or 10 seconds if it does not.
+### Default TTL Value
 
-The expected cache reflection time is immediate for Fastly, a few seconds for Akamai, and 10 seconds for others.
+For event-driven content, content changes must be reflected in the cache immediately. Therefore, the default TTL varies depending on the installed CDN module.
 
-To customize it, bind it by implementing `CdnCacheControlHeaderSetterInterface` with reference to `CdnCacheControlHeader`.
+If the CDN supports tag-based cache invalidation, the TTL is indefinite (1 year). If not supported, it is 10 seconds. The expected cache reflection time is immediate for Fastly, a few seconds for Akamai, and 10 seconds for others.
 
-## Cache invalidation
+To customize this, implement `CdnCacheControlHeaderSetterInterface` referring to `CdnCacheControlHeader` and bind it.
 
-Use the methods of `DonutRepositoryInterface` to manually invalidate the cache.
-This will invalidate not only the specified cache, but also the cache of the ETag, any other resources it depends on, and the cache of the ETag on the server side and, if possible, on the CDN.
+## Cache Invalidation
+
+Use the methods of `DonutRepositoryInterface` to manually invalidate the cache. Not only the specified cache, but also its ETag, caches of other resources that depend on it, and their ETags will be invalidated on both server-side and CDN (if possible):
 
 ```php
 interface DonutRepositoryInterface
@@ -205,14 +176,15 @@ interface DonutRepositoryInterface
 $this->repository->purge(new Uri('app://self/blog/comment'));
 ```
 
-### Disable by tag
+### Invalidate by Tag
 
 ```php
 $this->repository->invalidateTags(['template_a', 'campaign_b']);
 ```
+
 ### Tag Invalidation in CDN
 
-In order to enable tag-based cache invalidation in CDN, you need to implement and bind `PurgerInterface`.
+To enable tag-based cache invalidation in CDN, you need to implement and bind `PurgerInterface`:
 
 ```php
 use BEAR\QueryRepository\PurgerInterface;
@@ -223,9 +195,9 @@ interface PurgerInterface
 }
 ```
 
-### Specify dependent tags.
+### Specifying Dependency Tags
 
-Use the `SURROGATE_KEY` header to specify the key for PURGE. Use a space as a separator for multiple strings.
+Use the `SURROGATE_KEY` header to specify the key for PURGE. Use a space as separator for multiple strings:
 
 ```php
 use BEAR\QueryRepository\Header;
@@ -235,34 +207,38 @@ class Foo
     public $headers = [
         Header::SURROGATE_KEY => 'template_a campaign_b'
     ];
+}
 ```
 
-If the cache is invalidated by `template_a` or `campaign_b` tags, Foo's cache and Foo's ETag will be invalidated both server-side and CDN.
+If the cache is invalidated by `template_a` or `campaign_b` tags, Foo's cache and ETag will be invalidated on both server-side and CDN.
 
-### Resource Dependencies.
+### Resource Dependencies
 
-Use `UriTagInterface` to convert a URI into a dependency tag string.
+Use `UriTagInterface` to convert a URI into a dependency tag string:
 
 ```php
 public function __construct(private UriTagInterface $uriTag)
-{}
+{
+}
 ```
+
 ```php
 $this->headers[Header::SURROGATE_KEY] = ($this->uriTag)(new Uri('app://self/foo'));
 ```
 
-This cache will be invalidated both server-side and CDN when `app://self/foo` is modified.
+This cache will be invalidated on both server-side and CDN when `app://self/foo` is modified.
 
-### Make associative array a resource dependency.
+### Making Associative Array a Resource Dependency
 
 ```php
-// bodyの内容
+// body contents
 [
     ['id' => '1', 'name' => 'a'],
     ['id' => '2', 'name' => 'b'],
 ]
 ```
-If you want to generate a list of dependent URI tags from a `body` associative array like the above, you can specify the URI template with the `fromAssoc()` method.
+
+To generate a list of dependent URI tags from a `body` associative array like above, specify the URI template with the `fromAssoc()` method:
 
 ```php
 $this->headers[Header::SURROGATE_KEY] = $this->uriTag->fromAssoc(
@@ -271,7 +247,7 @@ $this->headers[Header::SURROGATE_KEY] = $this->uriTag->fromAssoc(
 );
 ```
 
-In the above case, this cache will be invalidated for both server-side and CDN when `app://self/item?id=1` and `app://self/item?id=2` are changed.
+In this case, this cache will be invalidated on both server-side and CDN when `app://self/item?id=1` or `app://self/item?id=2` is changed.
 
 ## Configuration
 
@@ -303,148 +279,141 @@ $this->install(
 
 Use `deflate` if you want to reduce Redis memory usage. This is a trade-off with CPU usage.
 
-## CDN
+## CDN Specific
 
-If you install a module that supports a specific CDN, vendor-specific headers will be output.
+If you install a module that supports a specific CDN, vendor-specific headers will be output:
 
 ```php
-$this->install(new FastlyModule())
-$this->install(new AkamaiModule())
+$this->install(new FastlyModule());
+$this->install(new AkamaiModule());
 ```
 
 ## Multi-CDN
 
-You can also configure a multi-tier CDN and set the TTL according to the role. For example, in this diagram, a multi-functional CDN is placed upstream, and a conventional CDN is placed downstream. Content invalidation is done for the upstream CDN, and the downstream CDN uses it.
+You can configure a multi-tier CDN and set TTL according to the role. For example, in the diagram below, a multi-functional CDN is placed upstream and a conventional CDN is placed downstream. Content invalidation is done for the upstream CDN, and the downstream CDN uses it.
 
 <img width="344" alt="multi cdn diagram" src="https://user-images.githubusercontent.com/529021/137098809-ec949a15-8efb-4d03-9808-3be15523ade7.png">
 
+# Response Headers
 
-# Response headers
+BEAR.Sunday automatically handles cache control for CDN and outputs headers for CDN. Client cache control should be specified in the `$header` of ResourceObject according to the content.
 
-Sunday will automatically do the cache control for the CDN and output the header for the CDN. Client cache control is described in `$header` of ResourceObject depending on the content.
+This section is important from security and maintenance perspectives. Make sure to specify `Cache-Control` in all ResourceObjects.
 
-This section is important for security and maintenance purposes.
-Make sure to specify the `Cache-Control` in all ResourceObjects.
+### Cannot Cache
 
-### Cannot cache
-
-Always specify content that cannot be cached.
+Always specify content that cannot be cached:
 
 ```php
 ResponseHeader::CACHE_CONTROL => CacheControl::NO_STORE
 ```
 
-### Conditional requests
+### Conditional Requests
 
-Check the server for content changes before using the cache. Server-side content changes will be detected and reflected.
+Check the server for content changes before using the cache. Server-side content changes will be detected and reflected:
 
 ```php
 ResponseHeader::CACHE_CONTROL => CacheControl::NO_CACHE
 ```
 
-### Specify client cache time.
+### Specifying Client Cache Time
 
-The client is cached on the client. This is the most efficient cache, but server-side content changes will not be reflected at the specified time.
-
-Also, this cache is not used when the browser reloads. The cache is used when a transition is made with the `<a>` tag or when a URL is entered.
+The client caches content. This is the most efficient cache, but server-side content changes will not be reflected during the specified time. Also, this cache is not used when the browser reloads. The cache is used when navigating with `<a>` tags or entering URLs:
 
 ```php
 ResponseHeader::CACHE_CONTROL => 'max-age=60'
 ```
 
-If response time is important to you, consider specifying SWR.
+If response time is important, consider specifying SWR:
 
 ```php
 ResponseHeader::CACHE_CONTROL => 'max-age=30 stale-while-revalidate=10'
 ```
 
-In this case, when the max-age of 30 seconds is exceeded, the old cached (stale) response will be returned for up to 10 seconds, as specified in the SWR, until a fresh response is obtained from the origin server. This means that the cache will be updated sometime between 30 and 40 seconds after the last cache update, but every request will be a response from the cache and will be fast.
+In this case, when max-age of 30 seconds is exceeded, the old cached (stale) response is returned for up to 10 seconds as specified by SWR, until a fresh response is obtained from the origin server. This means the cache is updated sometime between 30 and 40 seconds after the last update, but every request gets a cached response and is fast.
 
-#### RFC7234 compliant clients
+#### RFC7234 Compliant Clients
 
-To use the client cache with APIs, use an RFC7234 compliant API client.
+To use client cache with APIs, use an RFC7234 compliant API client:
 
-* iOS [NSURLCache](https://nshipster.com/nsurlcache/)
-* Android [HttpResponseCache](https://developer.android.com/reference/android/net/http/HttpResponseCache)
-* PHP [guzzle-cache-middleware](https://github.com/Kevinrob/guzzle-cache-middleware)
-* JavaScript(Node) [cacheable-request](https://www.npmjs.com/package/cacheable-request)
-* Go [lox/httpcache](https://github.com/lox/httpcache)
-* Ruby [faraday-http-cache](https://github.com/plataformatec/faraday-http-cache)
-* Python [requests-cache](https://pypi.org/project/requests-cache/)
+* iOS: [NSURLCache](https://nshipster.com/nsurlcache/)
+* Android: [HttpResponseCache](https://developer.android.com/reference/android/net/http/HttpResponseCache)
+* PHP: [guzzle-cache-middleware](https://github.com/Kevinrob/guzzle-cache-middleware)
+* JavaScript(Node): [cacheable-request](https://www.npmjs.com/package/cacheable-request)
+* Go: [lox/httpcache](https://github.com/lox/httpcache)
+* Ruby: [faraday-http-cache](https://github.com/plataformatec/faraday-http-cache)
+* Python: [requests-cache](https://pypi.org/project/requests-cache/)
 
-### private
+### Private Cache
 
-Specify `private` if you do not want to share the cache with other clients. The cache will be saved only on the client side. In this case, do not specify the cache on the server side.
+Specify `private` if you do not want to share the cache with other clients. The cache is saved only on the client side. In this case, do not specify cache on the server side.
 
-````php
+```php
 ResponseHeader::CACHE_CONTROL => 'private, max-age=30'
-````
+```
 
-> Even if you use shared cache, you don't need to specify `public` in most cases.
+## Cache Design
 
-## Cache design
+APIs (or content) can be divided into two categories: **Information APIs** and **Computation APIs**. Computation APIs have content that is difficult to reproduce and truly dynamic, making it unsuitable for caching. Information APIs, on the other hand, are APIs for content that is essentially static, even if read from a DB and processed by PHP.
 
-APIs (or content) can be divided into two categories: **Information APIs** (Information APIs) and **Computation APIs** (Computation APIs). The **Computation API** is content that is difficult to reproduce and is truly dynamic, making it unsuitable for caching. The Information API, on the other hand, is an API for content that is essentially static, even if it is read from a DB and processed by PHP.
-
-It analyzes the content in order to apply the appropriate cache.
+Analyze the content to apply appropriate caching:
 
 * Information API or Computation API?
-* Dependencies are
-* Are the comprehension relationships
-* Is the invalidation triggered by an event or TTL?
-* Is the event detectable by the application or does it need to be monitored?
+* What are the dependencies?
+* What are the containment relationships?
+* Is invalidation triggered by event or TTL?
+* Is the event detectable by the application or does it need monitoring?
 * Is the TTL predictable or unpredictable?
 
-Consider making cache design a part of the application design process and make it a specification. It should also contribute to the safety of your project throughout its lifecycle.
+Consider making cache design part of the application design process and include it in specifications. It will also contribute to the safety of your project throughout its lifecycle.
 
 ### Adaptive TTL
 
-Adaptive TTL is the ability to predict the lifetime of content and correctly tell the client or CDN when it will not be updated by an event during that time. For example, when dealing with a stock API, if it is Friday night, we know that the information will not be updated until the start of trading on Monday. We calculate the number of seconds until that time, specify it as the TTL, and then specify the appropriate TTL when it is time to trade.
+Adaptive TTL predicts the lifetime of content and correctly tells the client or CDN when it will not be updated during that time. For example, when dealing with a stock API, if it's Friday night, we know the information won't be updated until trading starts on Monday. We calculate the seconds until that time, specify it as TTL, and then specify the appropriate TTL during trading hours.
 
-The client does not need to request a resource that it knows will not be updated.
+The client doesn't need to request a resource it knows won't be updated.
 
-## #[Cacheable].
+## #[Cacheable]
 
-The traditional ##[Cacheable] TTL caching is also supported.
+Traditional TTL caching with `#[Cacheable]` is also supported.
 
-Example: 30 seconds cache on the server side, 30 seconds cache on the client.
+Example: 30 seconds cache on server side, 30 seconds cache on client. Since it's specified on server side, the same duration is cached on client side:
 
-The same number of seconds will be cached on the client side since it is specified on the server side.
-
-The same number of seconds will be cached on the client side.
+```php
 use BEAR\RepositoryModule\Annotation\Cacheable;
 
-#[Cacheable(expirySecond: 30)]]
+#[Cacheable(expirySecond: 30)]
 class CachedResource extends ResourceObject
 {
-````
+```
 
-Example: Cache the resource on the server and client until the specified expiration date (the date in `$body['expiry_at']`)
+Example: Cache the resource on server and client until the specified expiration date (the date in `$body['expiry_at']`):
 
-```php?start_inline
+```php
 use BEAR\RepositoryModule\Annotation\Cacheable;
 
-#[Cacheable(expiryAt: 'expiry_at')]]
+#[Cacheable(expiryAt: 'expiry_at')]
 class CachedResource extends ResourceObject
 {
-```.
+```
 
-See the [HTTP Cache](https://bearsunday.github.io/manuals/1.0/ja/http-cache.html) page for more information.
+See the [HTTP Cache](https://bearsunday.github.io/manuals/1.0/en/http-cache.html) page for more information.
 
 ## Conclusion
 
-Web content can be of the information (data) type or the computation (process) type. Although the former is essentially static, it is difficult to treat it as completely static content due to the problems of managing content changes and dependencies, so the cache was invalidated by TTL even though no content changes occurred. Sunday's caching framework treats information type content as static as possible, maximizing the power of the cache.
+Web content can be of the information (data) type or the computation (process) type. Although the former is essentially static, it was difficult to treat as completely static content due to problems managing content changes and dependencies, so cache was invalidated by TTL even when no content changes occurred.
 
+BEAR.Sunday's caching framework treats information type content as static as possible, maximizing the power of caching.
 
 ## Terminology
 
-* [条件付きリクエスト](https://developer.mozilla.org/ja/docs/Web/HTTP/Conditional_requests)
-* [ETag (バージョン識別子)](https://developer.mozilla.org/ja/docs/Web/HTTP/Headers/ETag)
-* [イベントドリブン型コンテンツ](https://www.fastly.com/blog/rise-event-driven-content-or-how-cache-more-edge)
-* [ドーナッツキャッシュ / 部分キャッシュ](https://www.infoq.com/jp/news/2011/12/MvcDonutCaching/)
-* [サロゲートキー / タグベースの無効化](https://docs.fastly.com/ja/guides/getting-started-with-surrogate-keys)
-* ヘッダー
-  * [Cache-Control](https://developer.mozilla.org/ja/docs/Web/HTTP/Headers/Cache-Control)
+* [Conditional Requests](https://developer.mozilla.org/en-US/docs/Web/HTTP/Conditional_requests)
+* [ETag (Version Identifier)](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag)
+* [Event-Driven Content](https://www.fastly.com/blog/rise-event-driven-content-or-how-cache-more-edge)
+* [Donut Cache / Partial Cache](https://www.infoq.com/news/2011/12/MvcDonutCaching/)
+* [Surrogate Key / Tag-Based Invalidation](https://docs.fastly.com/en/guides/getting-started-with-surrogate-keys)
+* Headers
+  * [Cache-Control](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control)
   * [CDN-Cache-Control](https://blog.cloudflare.com/cdn-cache-control/)
-  * [Vary](https://developer.mozilla.org/ja/docs/Web/HTTP/Headers/Vary)
-  * [Stale-While-Revalidate (SWR)](https://www.infoq.com/jp/news/2020/12/ux-stale-while-revalidate/)
+  * [Vary](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Vary)
+  * [Stale-While-Revalidate (SWR)](https://web.dev/stale-while-revalidate/)

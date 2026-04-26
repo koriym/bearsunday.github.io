@@ -9,21 +9,11 @@ permalink: /manuals/1.0/en/coding-guide.html
 
 ## Project
 
-`Vendor` should be the company name, team name or the owner (`excite`, `koriym` etc.).
-`Package` is the name of the application or service (`blog`, `news` etc.).
-Projects must be created on a per application basis. Even when you create a Web API and an HTML from different hosts, they are considered one project.
-
+`vendor` should be the company name, team name, or owner name (`excite`, `koriym`, etc.). `package` is the name of the application or service (`blog`, `news`, etc.). Projects are created on a per-application basis. Even when serving Web API and HTML from different hosts, they are considered one project.
 
 ## Style
 
-BEAR.Sunday follows the PSR style.
-
-  * [PSR1](https://github.com/php-fig/fig-standards/blob/master/accepted/PSR-1-basic-coding-standard.md)
-  * [PSR2](https://github.com/php-fig/fig-standards/blob/master/accepted/PSR-2-coding-style-guide.md)
-  * [PSR4](https://github.com/php-fig/fig-standards/blob/master/accepted/PSR-4-autoloader.md)
-
-
-Here is ResourceObject code example.
+Follow [PSR1](https://github.com/php-fig/fig-standards/blob/master/accepted/PSR-1-basic-coding-standard.md), [PSR2](https://github.com/php-fig/fig-standards/blob/master/accepted/PSR-2-coding-style-guide.md), [PSR4](https://github.com/php-fig/fig-standards/blob/master/accepted/PSR-4-autoloader.md).
 
 ```php
 <?php
@@ -34,52 +24,39 @@ use BEAR\Resource\Annotation\Embed;
 use BEAR\Resource\Annotation\Link;
 use BEAR\Resource\Code;
 use BEAR\Resource\ResourceObject;
-use BEAR\Sunday\Inject\ResourceInject;
-use Ray\AuraSqlModule\AuraSqlInject;
 
-/**
- * @Cacheable
- */
+#[CacheableResponse]
 class Entry extends ResourceObject
 {
-    use AuraSqlInject;
-    use ResourceInject;
+    public function __construct(
+        private readonly ExtendPdoInterface $pdo,
+        private readonly ResourceInterface $resource
+    ) {}
 
-    /**
-     * @Embed(rel="author", src="/author{?author_id}")
-     */
+    #[Embed(rel: "author", src: "/author{?author_id}")]
     public function onGet(string $author_id, string $slug): static
     {
         // ...
-
         return $this;
     }
 
-    /**
-     * @Link(rel="next_act", href="/act1")
-     * @Link(rel="next_act2", href="/act2")
-     */
-    public function onPost (
-        string $tile,
+    #[Link(rel: "next_action1", href: "/next_action1")]
+    public function onPost(
+        string $title,
         string $body,
         string $uid,
         string $slug
     ): static {
         // ...
         $this->code = Code::CREATED;
-
         return $this;
     }
 }
 ```
 
-A [DocBlock comment]([https://phpdoc.org/docs/latest/getting-started/your-first-set-of-documentation.html]) is optional. A DocBlock contains the method summary in one line.
-Then followed by the description, which can be a multiple lines.
-We should also put @params and @Link after description if possible.
+Resource [DocBlock comments](https://phpdoc.org/docs/latest/getting-started/your-first-set-of-documentation.html) are optional. Add a method summary (one line), description (multiple lines allowed), and `@params` when the resource URI or argument names alone are insufficient explanation.
 
-
-
-```php?start_inline
+```php
 /**
  * A summary informing the user what the associated element does.
  *
@@ -88,119 +65,95 @@ We should also put @params and @Link after description if possible.
  *
  * @param string $arg1 *description*
  * @param string $arg2 *description*
- * @param string $arg3 *description*
- *
- * @Link(rel="next_act", href="/next_act_uri")
- * @Link(rel="next_act2", href="/next_act_uri2")
 */
 ```
 
 ## Resources
 
-See [Resource Best Practices](resource_bp.html) for best practices for resources.
-
-## Globals
-
-We do not recommend referencing global values in resources or application classes. It is only used with Modules.
-
-* Do not refer to the value of [Superglobal](http://php.net/manual/ja/language.variables.superglobals.php)
-* Do not use [define](http://php.net/manual/en/function.define.php)
-* Do not create `Config` class to hold set values.
-* Do not use global object container (service locator) [[1]](http://koriym.github.io/adv10/), [[2]](http://blog.ploeh.dk/2010/02/03/ServiceLocatorisanAnti-Pattern/)
-* Use [Date](http://php.net/manual/en/function.date.php) function and [DateTime](http://php.net/manual/en/class.datetime.php) class. It is not recommended to get the time directly. Inject the time from outside using [koriym/now](https://github.com/koriym/Koriym.Now).
-
-
-Global method calls such as static methods are also not recommended.
-
-The values required by the application code are all injected. The setting files are used for injecting. When you need an external value such as Web API, make a special gateway class for all requests. Then you can mock that special class with DI or AOP.
-
-## Classes and object
-
-* * [Traits](http://php.net/manual/en/language.oop5.traits.php) are not recommended. Traits for injection such as `ResourceInject` that reduce boilerplate code for injection were added in PHP8 [constructor property promotion (declaring properties in the constructor signature)](https://www.php.net/manual/en/language.oop5.decon.php#language.oop5.decon.constructor.promotion). Use constructor injection.
-* It is not recommended for the child classes to use the parent class methods. Common functions are not shared by inheritance and trait, they are dedicated classes and they are injected and used. [Composite from inheritance](https://en.wikipedia.org/wiki/Composition_over_inheritance).
-* A class with only one method should reflect the function to the class name and should set the name of the method to `__invoke ()` so that function access can be made.
-
-## Script command
-
-* It is recommended to end the setup by using the `composer setup` command. This script includes the necessary database initialization and library checking. If manual operation such as `.env` setting is required, it is recommended that the procedure be displayed on the screen.
-* It is recommended that all application caches and logs are cleared with `composer cleanup` command.
-* It is recommended that all executable test (phpinit/phpcs/phpmd ..) are invoked with `composer test` command.
-* It is recommended an application is deployed with `composer deploy` command.
-
-## Code check
-
-It is recommended to check the codes for each commit with the following commands. These commands can be installed with [bear/qatools](https://github.com/bearsunday/BEAR.QATools).
-
-```
-phpcs src tests
-phpmd src text ./phpmd.xml
-php-cs-fixer fix --config-file=./.php_cs
-phpcbf src
-```
-
-## Resources
-
-Please also refer to [Resouce best practice](/manuals/1.0/en/resource.html#best-practice).
+See [Resource Best Practices](resource_bp.html) for resource best practices.
 
 ### Code
 
-Returns the appropriate status code. Testing is easier, and the correct information can be conveyed to bots and crawlers.
+Return appropriate status codes. This makes testing easier and conveys correct information to bots and crawlers.
 
-* `100` Continue Continuation of multiple requests
+* `100` Continue - Continuation of multiple requests
 * `200` OK
-* `201` Created Resource Creation
-* `202` Accepted queue / batch acceptance
-* `204` If there is no content body
-* `304` Not Modified Not Updated
-* `400` Bad request
-* `401` Unauthorized Authentication required
-* `403` Forbidden ban
+* `201` Created - Resource creation
+* `202` Accepted - Queue/batch acceptance
+* `204` No Content - When there is no body
+* `304` Not Modified - No update
+* `400` Bad Request - Request has issues
+* `401` Unauthorized - Authentication required
+* `403` Forbidden - Prohibited
 * `404` Not Found
 * `405` Method Not Allowed
-* `503` Service Unavailable Temporary error on server side
+* `503` Service Unavailable - Temporary server-side error
 
-In `OnPut` method, you deal with the resource state with idempotence. For example, resource creation with UUID or update resource state.
+`304` is automatically set when using the `#[Cacheable]` attribute. `404` is automatically set when the resource class doesn't exist, and `405` when the resource method doesn't exist. Also, always return `503` for DB connection errors to notify crawlers.
 
-`OnPatch` is implemented when changing the state of a part of a resource.
+### HTML Form Methods
 
-### HTML Form Method
+BEAR.Sunday can override methods using the `X-HTTP-Method-Override` header or `_method` query in `POST` requests from HTML web forms, but this is not necessarily recommended. For Page resources, implementing only `onGet` and `onPost` is acceptable.
 
-BEAR.Sunday can overwrite methods using the `X-HTTP-Method-Override` header or` _method` query at the `POST` request in the HTML web form, but it is not necessarily recommended . For the Page resource, it is OK to implement policies other than `onGet` and` onPost`. [[1]](http://programmers.stacxchange.com/questions/114156/why-are-there-are-no-put-and-delete-methods-on-html-forms), [[2]](Http://roy.gbiv.com/untangled/2009/it-is-okay-to-use-post)
+### Hyperlinks
 
-### Hyperlink
+* Resources with links are recommended to indicate them with `#[Link]`.
+* Resources are recommended to be embedded as semantic graphs using `#[Embed]`.
 
-* It is recommended that resources with links be indicated by `#[Link]`.
-* It is recommended that resources be embedded as a graph of semantic coherence with `#[Embed]`.
+## Globals
+
+Referencing global values in resources or application classes is not recommended. (Use only in Modules)
+
+* Do not reference [superglobal](http://php.net/manual/en/language.variables.superglobals.php) values
+* Do not use [define](http://php.net/manual/en/function.define.php)
+* Do not create `Config` classes to hold configuration values
+* Do not use global object containers (service locators)
+* Directly getting current time with [date](http://php.net/manual/en/function.date.php) function or [DateTime](http://php.net/manual/en/class.datetime.php) class is not recommended[^now]. Inject time from outside.
+* Global method calls such as static methods are also not recommended.
+* All values needed by application code should be injected, not retrieved from configuration files.[^inject-all]
+
+[^now]: [koriym/now](https://github.com/koriym/Koriym.Now)
+[^inject-all]: When using values from external systems like Web APIs, centralize them in client classes or Web API access resources to make mocking easy with DI or AOP.
+
+## Classes and Objects
+
+* [Traits](http://php.net/manual/en/language.oop5.traits.php) are not recommended.[^no-trait]
+* Child classes using parent class methods is not recommended. Common functions should be injected as dedicated classes rather than shared through inheritance or traits. [Composition over inheritance](https://en.wikipedia.org/wiki/Composition_over_inheritance).
+
+[^no-trait]: Injection traits like `ResourceInject` existed to reduce boilerplate code for injection, but lost their purpose with PHP8's [constructor property promotion](https://www.php.net/manual/en/language.oop5.decon.php#language.oop5.decon.constructor.promotion). Use constructor injection.
 
 ## DI
 
- * Do not inject the value itself of the execution context (prod, dev etc). Instead, we inject instances according to the context. The application does not know in which context it is running.
- * Setter injection is not recommended for library code.
- * It is recommended that you override the `toConstructor` bindings instead and avoid the `Provider` bindings as much as possible.
- * Avoid binding by `Module` according to conditions. [AvoidConditionalLogicInModules](https://github.com/google/guice/wiki/AvoidConditionalLogicInModules)
- * It is not recommended to reference environmental variables since there is no module. Pass it in the constructor.
+* Do not inject the execution context value itself (prod, dev, etc.). Instead, inject instances according to the context. The application should be unaware of which context it's running in.
+* Setter injection is not recommended for library code.
+* Prefer `toConstructor` bindings over `Provider` bindings where possible.
+* Avoid conditional bindings in `Module`. ([AvoidConditionalLogicInModules](https://github.com/google/guice/wiki/AvoidConditionalLogicInModules))
+* Do not reference environment variables from module's `configure()`. Use constructor injection.
 
 ## AOP
 
- * Do not make interceptor mandatory. We will make the program work even without an interceptor. (For example, if you remove `@Transactional` interceptor, the function of transaction will be lost, but "core concers" will work without issue.)
- * Prevent the interceptor from injecting dependencies in methods. Values that can only be determined at implementation time are injected into arguments via `@Assisted` injection.
- * If there are multiple interceptors, do not depend on the execution order.
- * If it is an interceptor unconditionally applied to all methods, consider the description in `bootstrap.php`.
+* Do not make interceptors mandatory. For example, logging and DB transactions should not change the essential behavior of the program even without interceptors.
+* Avoid having interceptors inject dependencies into methods. Values that can only be determined at implementation time should be injected into arguments via `@Assisted` injection.
+* When there are multiple interceptors, avoid depending on execution order as much as possible.
+* For interceptors that are unconditionally applied to all methods, consider describing them in `bootstrap.php`.
+* AOP is used to separate cross-cutting concerns from core concerns. Using interceptors to hack specific methods is not recommended.
+
+## Script Commands
+
+* It is recommended that `composer setup` command completes application setup. This script includes database initialization and required library checks. If manual operations like `.env` settings are needed, it is recommended to display the procedure on screen.
 
 ## Environment
 
-To make applications testable, it should also work on the console, and not only on the Web.
-
-It is recommended not to include the `.env` file in the project repository.
+* Applications that only work on the Web are not recommended. Make them work on console as well for testability.
+* It is recommended not to include `.env` files in the project repository.
+* Consider using [Koriym.EnvJson](https://github.com/koriym/Koriym.EnvJson) which describes schema instead of `.env`.
 
 ## Testing
 
-* Focus on resource testing using resource clients, adding resource representation testing (e.g. HTML) if needed.
-* Hypermedia tests can leave use cases as tests.
-* `prod` is the context for production. Use of the `prod` context in tests should be minimal, preferably none.
+* Focus on resource testing using resource clients, adding resource representation testing (e.g., HTML) if needed.
+* Hypermedia tests can preserve use cases as tests.
+* `prod` is the context for production. Use of `prod` context in tests should be minimal, preferably none.
 
-## HTML templates
+## HTML Templates
 
 * Avoid large loop statements. Consider replacing if statements in loops with [Generator](https://www.php.net/manual/en/language.generators.overview.php).
-
----

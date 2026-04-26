@@ -4,19 +4,15 @@ title: Module
 category: Manual
 permalink: /manuals/1.0/en/module.html
 ---
-
 # Modules
 
-A Module is a collection of DI & AOP bindings that sets up your application.
+A Module is a set of DI and AOP bindings. BEAR.Sunday does not have general configuration files, Config classes, or execution modes. Values needed by each component are provided through dependency injection. Modules are responsible for these dependency bindings.
 
-BEAR.Sunday doesn't have a *global* config file or a config class to set default values for components such as a database or a template engine.
-Instead for each peice of functionality we set up DI and AOP by injecting configuration values into a stand alone module.
+The entry point module for the application is `AppModule` (src/Module/AppModule.php). Other required modules are `install`ed within `AppModule`.
 
-`AppModule` (src/Module/AppModule.php) is the root module. We use an `install()` method in here to load each module that we would like to invoke.
+Values needed by modules (values needed at compile time, not runtime) are bound through manual constructor injection.
 
-You can also override existing bindings by using `override()`.
-
-```php?start_inline
+```php
 class AppModule extends AbstractAppModule
 {
     /**
@@ -24,117 +20,95 @@ class AppModule extends AbstractAppModule
      */
     protected function configure()
     {
-        // ...
-        // install additional modules
-        $this->install(new AuraSqlModule('mysql:host=localhost;dbname=test', 'username', 'password');
-        $this->install(new TwigModule));
-        // install basic module
-        $this->install(new PackageModule));
+        // Additional modules
+        $this->install(new AuraSqlModule('mysql:host=localhost;dbname=test', getenv('db_username'), getenv('db_password')));
+        $this->install(new TwigModule());
+        // Package standard module
+        $this->install(new PackageModule());
     }
 }
 ```
 
-## DI bindings
+## DI Bindings
 
-`Ray.Di` is the core DI framework used in BEAR.Sunday. It binds interfaces to a class or factory to create an object graph.
+Here are the representative binding patterns:
 
-```php?start_inline
+```php
 // Class binding
 $this->bind($interface)->to($class);
+
 // Provider (factory) binding
 $this->bind($interface)->toProvider($provider);
+
 // Instance binding
 $this->bind($interface)->toInstance($instance);
+
 // Named binding
 $this->bind($interface)->annotatedWith($annotation)->to($class);
+
 // Singleton
 $this->bind($interface)->to($class)->in(Scope::SINGLETON);
+
 // Constructor binding
 $this->bind($interface)->toConstructor($class, $named);
 ```
 
-Bindings declared first take priority
-More info can be found at Ray.Di [README](https://github.com/ray-di/Ray.Di/blob/2.x/README.md)
+For details, see [DI](di.html).
 
-## AOP Bindings
+## AOP Configuration
 
-We can "search" for classes and methods with a built-in `Matcher`, then interceptors can be bound to any found methods.
+AOP "searches" for classes and methods using `Matcher` and binds interceptors to matching methods.
 
-```php?start_inline
+```php
+// Example 1: Binding by method name
 $this->bindInterceptor(
-    // In any class
-    $this->matcher->any(),
-    // Method(s) names that start with "delete"
-    $this->matcher->startWith('delete'),
-    // Bind a Logger interceptor
-    [LoggerInterceptor::class]
+    $this->matcher->any(),                   // In any class
+    $this->matcher->startsWith('delete'),    // Methods starting with "delete"
+    [Logger::class]                          // Bind Logger interceptor
 );
 
+// Example 2: Binding by class and annotation
 $this->bindInterceptor(
-    // The AdminPage class or a class inherited from it.
-    $this->matcher->SubclassesOf(AdminPage::class),
-    // Annotated with the @Auth annotation
-    $this->matcher->annotatedWith(Auth::class),
-    // Bind the AdminAuthenticationInterceptor
-    [AdminAuthenticationInterceptor::class]
+    $this->matcher->SubclassesOf(AdminPage::class),  // Classes inheriting or implementing AdminPage
+    $this->matcher->annotatedWith(Auth::class),      // Methods annotated with @Auth
+    [AdminAuthentication::class]                     // Bind AdminAuthentication interceptor
 );
 ```
 
-`Matcher` has various binding methods.
+For details, see [AOP](aop.html).
 
- * [Matcher::any](https://github.com/ray-di/Ray.Aop/blob/develop-2/src/MatcherInterface.php#L16) - Any
- * [Matcher::annotatedWith](https://github.com/ray-di/Ray.Aop/blob/develop-2/src/MatcherInterface.php#L23) - Annotation
- * [Matcher::subclassesOf](https://github.com/ray-di/Ray.Aop/blob/2.x/src/MatcherInterface.php#L30) - Sub class
- * [Matcher::startsWith](https://github.com/ray-di/Ray.Aop/blob/2.x/src/MatcherInterface.php#L37) - start with name (class or method)
- * [Matcher::logicalOr](https://github.com/ray-di/Ray.Aop/blob/2.x/src/MatcherInterface.php#L44) - OR
- * [Matcher::logicalAnd](https://github.com/ray-di/Ray.Aop/blob/2.x/src/MatcherInterface.php#L51) - AND
- * [Matcher::logicalNot](https://github.com/ray-di/Ray.Aop/blob/2.x/src/MatcherInterface.php#L58) - NOT
+## Binding Priority
 
-## Interceptor
+### Priority Within the Same Module
 
-In an interceptor a `MethodInvocation` object gets passed to the `invoke` method. We can the decorate the targetted instances so that you run computations before or after any methods on the target are invoked.
+Within the same module, earlier bindings take priority. In the following example, Foo1 takes priority:
 
-```php?start_inline
-class MyInterceptor implements MethodInterceptor
-{
-    public function invoke(MethodInvocation $invocation)
-    {
-        // Before invocation
-        // ...
-
-        //  Method invocation
-        $result = $invocation->proceed();
-
-        //  After invocation
-        // ...
-
-        return $result;
-    }
-}
+```php
+$this->bind(FooInterface::class)->to(Foo1::class);
+$this->bind(FooInterface::class)->to(Foo2::class);
 ```
 
-With the `MethodInvocation` object, you can access the target method's invocation object, method's and parameters.
+### Priority in Module Installation
 
- * [MethodInvocation::proceed](https://github.com/ray-di/Ray.Aop/blob/develop-2/src/Joinpoint.php#L39) - Invoke method
- * [MethodInvocation::getMethod](https://github.com/ray-di/Ray.Aop/blob/develop-2/src/MethodInvocation.php) -  Get method reflection
- * [MethodInvocation::getThis](https://github.com/ray-di/Ray.Aop/blob/develop-2/src/Joinpoint.php#L48) - Get object
- * [MethodInvocation::getArguments](https://github.com/ray-di/Ray.Aop/blob/develop-2/src/Invocation.php) - Get parameters
+Earlier installed modules take priority. In the following example, Foo1Module takes priority:
 
-Annotations can be obtained using the reflection API.
-
-```php?start_inline
-$method = $invocation->getMethod();
-$class = $invocation->getMethod()->getDeclaringClass();
+```php
+$this->install(new Foo1Module);
+$this->install(new Foo2Module);
 ```
 
- * `$method->getAnnotations()`
- * `$method->getAnnotation($name)`
- * `$class->getAnnotations()`
- * `$class->getAnnotation($name)`
+To give later modules priority, use `override`. In the following example, Foo2Module takes priority:
 
-## Environment Settings
+```php
+$this->install(new Foo1Module);
+$this->override(new Foo2Module);
+```
 
-BEAR.Sunday does not have any special environment mode except `prod`.
-A Module and the application itself are unaware of the current environment.
+### Priority in Context String
 
-There is no way to get the current "mode", this is intentional to keep the code clean.
+In context strings, left modules have priority in bindings. For example, with `prod-hal-app`:
+
+- HalModule has priority over AppModule
+- ProdModule has priority over HalModule
+
+They are installed in this priority order.
