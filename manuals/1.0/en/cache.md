@@ -294,9 +294,9 @@ You can configure a multi-tier CDN and set TTL according to the role. For exampl
 
 <img width="344" alt="multi cdn diagram" src="https://user-images.githubusercontent.com/529021/137098809-ec949a15-8efb-4d03-9808-3be15523ade7.png">
 
-# Response Headers
+## Response Headers
 
-BEAR.Sunday automatically handles cache control for CDN and outputs headers for CDN. Client cache control should be specified in the `$header` of ResourceObject according to the content.
+BEAR.Sunday automatically handles cache control for CDN and outputs headers for CDN. Client cache control should be specified in the `$headers` of ResourceObject according to the content.
 
 This section is important from security and maintenance perspectives. Make sure to specify `Cache-Control` in all ResourceObjects.
 
@@ -332,9 +332,9 @@ ResponseHeader::CACHE_CONTROL => 'max-age=30 stale-while-revalidate=10'
 
 In this case, when max-age of 30 seconds is exceeded, the old cached (stale) response is returned for up to 10 seconds as specified by SWR, until a fresh response is obtained from the origin server. This means the cache is updated sometime between 30 and 40 seconds after the last update, but every request gets a cached response and is fast.
 
-#### RFC7234 Compliant Clients
+#### RFC 7234-compliant Clients
 
-To use client cache with APIs, use an RFC7234 compliant API client:
+To use client cache with APIs, use an RFC 7234-compliant API client:
 
 * iOS: [NSURLCache](https://nshipster.com/nsurlcache/)
 * Android: [HttpResponseCache](https://developer.android.com/reference/android/net/http/HttpResponseCache)

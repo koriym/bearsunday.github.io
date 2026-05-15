@@ -12,7 +12,7 @@ The repository created in this tutorial has been pushed to [https://github.com/b
 
 Let's try using this project as a library. First, create a new project folder and prepare a `composer.json`.
 
-```
+```bash
 mkdir app
 cd app
 mkdir -p ticket/log
@@ -41,7 +41,7 @@ composer.json
 
 Running `composer install` will install the project as a library.
 
-```
+```bash
 composer install
 ```
 
@@ -60,7 +60,7 @@ export TKT_DB_DSN=mysql:host=${TKT_DB_HOST}\;dbname=${TKT_DB_NAME}
 
 You can export these to the environment variables with the `source` command.
 
-```
+```bash
 source .env
 ```
 
@@ -85,10 +85,10 @@ echo $response->code . PHP_EOL;
 
 Save it as `index.php` and run it.
 
-```
+```bash
 php index.php
 ```
-```
+```text
 201
 ```
 
@@ -257,7 +257,7 @@ Let's try it..
 php bin/import.php
 ```
 
-```
+```text
 string(17) "Hello BEAR.Sunday"
 ```
 
