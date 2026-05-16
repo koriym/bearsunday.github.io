@@ -19,7 +19,7 @@ The distinctive technologies and features of BEAR.Sunday are explained in the fo
 
 ### Resource Oriented Architecture (ROA)
 
-BEAR.Sunday's ROA is an architecture that realizes RESTful API within a web application. It is the core of BEAR.Sunday's design principles, functioning as both a hypermedia framework and a service-oriented architecture. Similar to the Web, all data and functions are considered resources and are operated through standardized interfaces such as GET, POST, PUT, and DELETE.
+BEAR.Sunday's ROA is an architecture that realizes RESTful API within a web application. It is the core of BEAR.Sunday's design principles, treating everything as a hypermedia framework and Object as a Service. Similar to the Web, all data and functions are considered resources and are operated through standardized interfaces such as GET, POST, PUT, and DELETE.
 
 #### URI
 
@@ -169,8 +169,6 @@ BEAR.Sunday is designed with an emphasis on maintaining backward compatibility i
 
 BEAR.Sunday not only adopts semantic versioning but also does not perform major version upgrades that involve breaking changes. It prevents new feature additions or changes to existing features from affecting existing code. Code that has become old and unused is given the attribute "deprecated" but is never deleted and does not affect the behavior of existing code. Instead, new features are added, and evolution continues.
 
-Here's the English translation of the revised text:
-
 ### Acyclic Dependencies Principle (ADP)
 
 The Acyclic Dependencies Principle states that dependencies should be unidirectional and non-circular. The BEAR.Sunday framework adheres to this principle and is composed of a series of packages with a hierarchical structure where larger framework packages depend on smaller framework packages. Each level does not need to be aware of the existence of other levels that encompass it, and the dependencies are unidirectional and do not form cycles. For example, Ray.Aop is not even aware of the existence of Ray.Di, and Ray.Di is not aware of the existence of BEAR.Sunday.
@@ -197,24 +195,45 @@ To provide applications with high code quality, the BEAR.Sunday framework also s
 
 ### Value for Developers
 
-* Improved productivity: Based on robust design patterns and principles with constraints that don't change over time, developers can focus on core business logic.
-* Collaboration in teams: By providing development teams with consistent guidelines and structure, it keeps the code of different engineers loosely coupled and unified, improving code readability and maintainability.
-* Flexibility and extensibility: BEAR.Sunday's policy of not including libraries brings developers flexibility and freedom in component selection.
-* Ease of testing: BEAR.Sunday's DI (Dependency Injection) and ROA (Resource Oriented Architecture) increase the ease of testing.
+* **Improved productivity**:
+  Based on robust design patterns and principles with constraints that don't change over time, developers can focus on the core business logic.
+
+* **Collaboration in teams**:
+  By providing development teams with consistent guidelines and structure, it keeps the code of different engineers loosely coupled and unified, improving code readability and maintainability.
+
+* **Flexibility and extensibility**:
+  BEAR.Sunday's policy of not including libraries brings developers flexibility and freedom in component selection.
+
+* **Ease of testing**:
+  By adopting DI (Dependency Injection) and ROA (Resource Oriented Architecture), effective and efficient testing is possible.
 
 ### Value for Users
 
-* High performance: BEAR.Sunday's optimized fast startup and CDN-centric caching strategy brings users a fast and responsive experience.
-* Reliability and availability: BEAR.Sunday's CDN-centric caching strategy minimizes single points of failure (SPOF), allowing users to enjoy stable services.
-* Ease of use: BEAR.Sunday's excellent connectivity makes it easy to collaborate with other languages and systems.
+* **High performance**:
+  BEAR.Sunday's optimized fast startup and CDN-centric caching strategy delivers a fast and responsive experience to users.
+
+* **Reliability and availability**:
+  BEAR.Sunday's CDN-centric caching strategy minimizes single points of failure (SPOF), allowing users to enjoy stable services.
+
+* **Ease of use**:
+  Excellent connectivity enables smooth collaboration with other languages and systems. By providing resources as CLI tools, end users can use the application's features without complex environment configuration.
 
 ### Value for Business
 
-* Reduced development costs: The consistent guidelines and structure provided by BEAR.Sunday promote a sustainable and efficient development process, reducing development costs.
-* Reduced maintenance costs: BEAR.Sunday's approach to maintaining backward compatibility increases technical continuity and minimizes the time and cost of change response.
-* High extensibility: With technologies like DI (Dependency Injection) and AOP (Aspect Oriented Programming) that change behavior while minimizing code changes, BEAR.Sunday allows applications to be easily extended in line with business growth and changes.
-* Excellent User Experience (UX): BEAR.Sunday provides high performance and high availability, increasing user satisfaction, enhancing customer loyalty, expanding the customer base, and contributing to business success.
+* **Reduced development costs**:
+  By providing consistent guidelines and structure, BEAR.Sunday enables a sustainable and efficient development process, reducing development costs.
 
-Excellent constraints do not change. The constraints brought by BEAR.Sunday provide specific value to developers, users, and businesses respectively.
+* **Reduced maintenance costs**:
+  BEAR.Sunday's approach that emphasizes backward compatibility increases technical continuity and minimizes the time and cost required for change response.
 
-BEAR.Sunday is a framework designed based on the principles and spirit of the Web, providing developers with clear constraints to empower them to build flexible and robust applications.
+* **High extensibility**:
+  With technologies like DI (Dependency Injection) and AOP (Aspect Oriented Programming) that change behavior while minimizing code changes, applications can be flexibly extended in line with business growth and change.
+
+* **Excellent User Experience (UX)**:
+  By providing high performance and availability, user satisfaction is improved, contributing to business success through enhanced customer loyalty and an expanded customer base.
+
+### Summary
+
+Excellent constraints do not change. The constraints provided by BEAR.Sunday bring concrete and lasting value to developers, users, and businesses respectively.
+
+BEAR.Sunday is a framework designed based on the principles and spirit of the Web. By providing developers with clear constraints, it empowers them to build applications that combine flexibility and robustness.

@@ -81,6 +81,123 @@ class Index
 `Ray.AuraSqlModule` contains [Aura.SqlQuery](https://github.com/auraphp/Aura.SqlQuery) to help you build sql queries.
 [Aura.SqlQuery](https://github.com/auraphp/Aura.SqlQuery) also have other useful methods like [Array Quoting](https://github.com/auraphp/Aura.Sql/tree/2.x#array-quoting), [fetch*()](https://github.com/auraphp/Aura.Sql/tree/2.x#new-fetch-methods), [perform()](https://github.com/auraphp/Aura.Sql/tree/2.x#the-perform-method) and [yield*()](https://github.com/auraphp/Aura.Sql/tree/2.x#new-yield-methods) that you can use for your needs, please check their documentation.
 
+### perform() method
+
+The `perform()` method allows you to bind an array of values to a SQL statement that has only one placeholder.
+
+```php?start_inline
+$stm = 'SELECT * FROM test WHERE foo IN (:foo)'
+$array = ['foo', 'bar', 'baz'];
+```
+
+With existing PDO:
+
+```php?start_inline
+// the native PDO way does not work (PHP Notice:  Array to string conversion)
+// you cannot bind an array to `:foo` with native PDO
+$sth = $pdo->prepare($stm);
+$sth->bindValue('foo', $array);
+```
+
+With Aura.Sql's ExtendedPDO:
+
+```php?start_inline
+$stm = 'SELECT * FROM test WHERE foo IN (:foo)'
+$values = ['foo' => ['foo', 'bar', 'baz']];
+$sth = $pdo->perform($stm, $values);
+```
+
+`['foo', 'bar', 'baz']` is bound to `:foo`. You can inspect the actual query with `queryString`.
+
+```php?start_inline
+echo $sth->queryString;
+// the query string has been modified by ExtendedPdo to become
+// "SELECT * FROM test WHERE foo IN ('foo', 'bar', 'baz')"
+```
+
+### fetch*() methods
+
+Instead of repeating `prepare()`, `bindValue()`, and `execute()` to retrieve values from the database, you can use `fetch*()` methods to reduce boilerplate code.
+(Internally, `perform()` is executed, so array placeholders are also supported.)
+
+```php?start_inline
+$stm  = 'SELECT * FROM test WHERE foo = :foo AND bar = :bar';
+$bind = array('foo' => 'baz', 'bar' => 'dib');
+// "fetch all" using native PDO
+$pdo = new PDO(...);
+$sth = $pdo->prepare($stm);
+$sth->execute($bind);
+$result = $sth->fetchAll(PDO::FETCH_ASSOC);
+
+// "fetch all" using ExtendedPdo
+$pdo = new ExtendedPdo(...);
+$result = $pdo->fetchAll($stm, $bind);
+
+// fetchAssoc() returns an associative array of all rows where the key is the first column.
+$result = $pdo->fetchAssoc($stm, $bind);
+
+// fetchGroup() is like fetchAssoc() except that the values aren't wrapped in
+// arrays. Instead, single column values are returned as a single dimensional
+// array and multiple columns are returned as an array of arrays
+// Set style to PDO::FETCH_NAMED when values are an array
+// (i.e. there are more than two columns in the select)
+$result = $pdo->fetchGroup($stm, $bind, $style = PDO::FETCH_COLUMN)
+
+// fetchOne() returns the first row as an associative array where the keys are the column names.
+$result = $pdo->fetchOne($stm, $bind);
+
+// fetchPairs() returns an associative array using the first column value as the key and the second column value as the value.
+$result = $pdo->fetchPairs($stm, $bind);
+
+// fetchValue() returns the value of the first column.
+$result = $pdo->fetchValue($stm, $bind);
+
+// fetchAffected() returns the number of affected rows.
+$stm = "UPDATE test SET incr = incr + 1 WHERE foo = :foo AND bar = :bar";
+$row_count = $pdo->fetchAffected($stm, $bind);
+?>
+```
+
+The `fetchAll()`, `fetchAssoc()`, `fetchCol()`, and `fetchPairs()` methods accept an optional third argument that is a callable to be applied to each row.
+
+```php?start_inline
+$result = $pdo->fetchAssoc($stm, $bind, function (&$row) {
+    // add a column to the row
+    $row['my_new_col'] = 'Added this column from the callable.';
+});
+?>
+```
+
+### yield*() methods
+
+To save memory, you can use `yield*()` methods. While `fetch*()` methods retrieve all rows at once,
+`yield*()` methods return an iterator.
+
+```php
+$stm  = 'SELECT * FROM test WHERE foo = :foo AND bar = :bar';
+$bind = array('foo' => 'baz', 'bar' => 'dib');
+
+// like fetchAll(), each row is an associative array
+foreach ($pdo->yieldAll($stm, $bind) as $row) {
+    // ...
+}
+
+// like fetchAssoc(), the key is the first column name and each row is an associative array
+foreach ($pdo->yieldAssoc($stm, $bind) as $key => $row) {
+    // ...
+}
+
+// like fetchCol(), returns the values of the first column
+foreach ($pdo->yieldCol($stm, $bind) as $val) {
+    // ...
+}
+
+// like fetchPairs(), returns key/value pairs from the first two columns
+foreach ($pdo->yieldPairs($stm, $bind) as $key => $val) {
+    // ...
+}
+```
+
 ## Replication
 
 To automatically perform master / slave connection, specify the IP of the slave DB as the fourth argument.
