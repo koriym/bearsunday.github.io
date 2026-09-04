@@ -122,9 +122,9 @@ opcache.preload=phar:///path/to/app.phar/preload.php
 
 `autoload.php` is not included in the archive. With preload, [autoload.php is no longer needed](production.html#autoloadphp). The `preload.php` the compile wrote cannot be used from beside the archive. Its requires are written relative to its own directory, and there is no `vendor/` outside the archive, so startup fails with `Failed opening required '…/vendor/autoload.php'`. Also, `preload.php` is overwritten at `{appDir}/preload.php` on every compile, so run `phar()` for the context you compiled last. If another context's `preload.php` remains, `PharPreloadForAnotherBuildException` is thrown.
 
-## One binary
+## PHP without installing PHP {#one-binary}
 
-[static-php-cli](https://static-php.dev) builds a single PHP binary with no shared-library dependencies. Placing the `php` and `php-fpm` binaries is enough to run. There is no need to install PHP on the host or to match the distribution's PHP version. Include the `phar` extension and the extensions the application uses in the build.
+The archive stays a separate file. What becomes one here is the PHP that runs it. [static-php-cli](https://static-php.dev) builds a `php` binary with its extensions and libraries linked in, with no shared-library dependencies. Placing the `php` and `php-fpm` binaries is enough to run. There is no need to install PHP on the host or to match the distribution's PHP version. Include the `phar` extension and the extensions the application uses in the build.
 
 ```bash
 ./spc download --for-extensions=phar,opcache -P
@@ -138,6 +138,18 @@ Running is the same. Use this binary instead of the host's `php`.
 ```
 
 For php-fpm, start `./buildroot/bin/php-fpm` with the pool configuration file. The entry point placement and the opcache and `opcache.preload` settings are the same as with the host's PHP.
+
+### One executable (CLI) {#one-executable}
+
+For a command-line application, the archive and PHP can be one file. The `micro` build of static-php-cli (`--build-micro`) produces `micro.sfx`, a PHP that runs whatever is appended to it. Append the archive.
+
+```bash
+cat micro.sfx app.phar > myapp
+chmod +x myapp
+./myapp get '/index?name=BEAR'
+```
+
+The result is one executable that carries PHP, its extensions, the application and its compiled DI scripts. It can be renamed, copied to another machine of the same platform, and started from any directory, and it writes only where [ReadOnlyAppModule](#readonlyappmodule) says. `micro` is a CLI SAPI, so this is for commands and [BEAR.Cli](cli.html) tools; the web entry point stays with php-fpm and the archive beside it. A prebuilt `micro.sfx` for each PHP version and platform is at [dl.static-php.dev](https://dl.static-php.dev/static-php-cli/common/).
 
 ## Copying to another location
 
